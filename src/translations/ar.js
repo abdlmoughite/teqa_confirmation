@@ -1,0 +1,172 @@
+export default {
+  common: {
+    back: "رجوع",
+    continue: "متابعة",
+    submit: "تأكيد",
+    loading: "جاري التحميل...",
+    field_required: "هذا الحقل مطلوب",
+    success: "نجاح",
+    save: "حفظ",
+    next: "التالي",
+    previous: "السابق",
+    confirm: "تأكيد",
+    yes: "نعم",
+    no: "لا",
+    error: "حدث خطأ",
+    checking: "جاري التحقق…",
+    home: "الرئيسية",
+    go_home: "العودة إلى الرئيسية",
+
+    morocco: "المغرب",
+    france: "فرنسا",
+    tunisia: "تونس",
+    algeria: "الجزائر",
+    belgium: "بلجيكا",
+    canada: "كندا",
+    switzerland: "سويسرا",
+
+    select: "اختر",
+    country: "الدولة",
+  },
+
+  auth: {
+    account_info: "معلومات الحساب",
+    email: "البريد الإلكتروني",
+    email_placeholder: "example@mail.com",
+    email_invalid: "البريد الإلكتروني غير صالح",
+    email_taken: "البريد الإلكتروني مستخدم",
+    email_available: "البريد الإلكتروني متاح",
+    required: "هذا الحقل مطلوب",
+
+    username: "اسم المستخدم",
+    username_placeholder: "اسم المستخدم",
+    username_taken: "اسم المستخدم غير متاح",
+
+    password: "كلمة المرور",
+    password_min: "8 أحرف على الأقل",
+    password_uppercase: "يجب أن تحتوي على حرف كبير",
+    password_lowercase: "يجب أن تحتوي على حرف صغير",
+    password_number: "يجب أن تحتوي على رقم",
+    password_special: "يجب أن تحتوي على رمز خاص",
+
+    country: "الدولة",
+
+    account_type: "نوع الحساب",
+    select: "اختر...",
+    role_store: "متجر",
+    role_agency_owner: "صاحب وكالة",
+    role_agency_agent: "وكيل",
+
+    pass_min: "8 أحرف على الأقل",
+    pass_upper: "حرف كبير واحد على الأقل",
+    pass_digit: "رقم واحد على الأقل",
+    pass_special: "رمز خاص واحد على الأقل",
+    checking: "جاري التحقق...",
+  },
+
+  register: {
+    success_title: "تم التسجيل بنجاح!",
+    success_message: "تم إنشاء حسابك بنجاح.",
+    redirecting: "سيتم التحويل خلال",
+    go_to_login: "الذهاب إلى تسجيل الدخول",
+    step: "الخطوة",
+    of: "من",
+    have_account: "لديك حساب بالفعل؟",
+    login_here: "سجل الدخول هنا",
+    title: "إنشاء حساب",
+    subtitle: "انضم إلى منصتنا في خطوات بسيطة",
+
+    step1_title: "معلومات الحساب",
+    step1_subtitle: "أدخل معلوماتك للمتابعة",
+    step_progress: "الخطوة 1 من 3",
+
+    account_type: "نوع الحساب",
+    select_role: "يرجى اختيار نوع الحساب",
+
+    role_store: "متجر",
+    role_agency_owner: "صاحب وكالة",
+    role_agency_agent: "وكيل وكالة",
+
+    fix_errors: "يرجى تصحيح الحقول غير الصحيحة.",
+    success: "تم إنشاء الحساب بنجاح!",
+    can_login_now: "يمكنك تسجيل الدخول الآن.",
+    success_description: "تم إنشاء الحساب بنجاح وتم حفظ جميع المعلومات.",
+    validation_failed: "تعذر إتمام التسجيل، يرجى تصحيح الحقول أدناه.",
+  },
+
+  store: {
+    title: "معلومات المتجر",
+    name: "اسم المتجر",
+    activity: "مجال النشاط",
+    address: "عنوان المتجر",
+    available: "الاسم متاح ✓",
+    errors: {
+      required: "هذا الحقل مطلوب",
+      exists: "هذا الاسم مستخدم",
+      too_short: "يجب أن يحتوي الاسم على 3 أحرف على الأقل",
+      check_failed: "فشل التحقق",
+    },
+  },
+
+  agency: {
+    title: "معلومات الوكالة",
+    name: "اسم الوكالة",
+    industry: "النشاط",
+    verification_file: "وثيقة التحقق",
+    submit: "إنشاء الوكالة",
+    taken: "الاسم مستخدم بالفعل",
+  },
+
+  agent: {
+    title: "معلومات الوكيل",
+    first_name: "الاسم الشخصي",
+    last_name: "اسم العائلة",
+    bio: "نبذة",
+    skills: "المهارات",
+    submit: "إنشاء الملف الشخصي",
+  },
+
+  home: {
+    title: "مرحباً بك في",
+    subtitle: "منصة حديثة لإدارة خدماتك بسهولة.",
+    login: "تسجيل الدخول",
+    register: "إنشاء حساب",
+  },
+
+  auth_login: {
+    login_title: "تسجيل الدخول",
+    email: "البريد الإلكتروني",
+    password: "كلمة المرور",
+    login_btn: "دخول",
+    forgot_password: "نسيت كلمة المرور؟",
+    create_account: "إنشاء حساب",
+    invalid_credentials: "البريد الإلكتروني أو كلمة المرور غير صحيحة.",
+
+    errors: {
+      unauthorized: "غير مصرح بالدخول.",
+      forbidden: "تم تعطيل حسابك.",
+      not_found: "لم يتم العثور على الحساب.",
+      too_many_requests: "محاولات كثيرة، حاول لاحقاً.",
+      server: "خطأ في الخادم.",
+      unknown: "حدث خطأ غير متوقع.",
+    },
+  },
+
+  reset: {
+    request_title: "إعادة تعيين كلمة المرور",
+    send_link: "إرسال الرابط",
+    email_sent: "إذا كان البريد موجوداً، تم إرسال الرابط.",
+    required: "هذا الحقل مطلوب",
+    confirm_title: "إعادة تعيين كلمة المرور",
+    new_password: "كلمة المرور الجديدة",
+    confirm_button: "تأكيد",
+    success: "تم تغيير كلمة المرور بنجاح!",
+    error_generic: "حدث خطأ أثناء إعادة التعيين.",
+    weak: "ضعيفة",
+    medium: "متوسطة",
+    strong: "قوية",
+    password_mismatch: "كلمتا المرور غير متطابقتين",
+    password_required: "كلمة المرور مطلوبة",
+    confirm_password: "تأكيد كلمة المرور",
+  },
+};
