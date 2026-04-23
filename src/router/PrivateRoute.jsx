@@ -1,23 +1,16 @@
-import { useContext, useEffect } from "react";
+import { useContext } from "react";
+import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
 import Loading from "../ui/Loading";
 
-export default function PrivateRoute({ children }) {
+const PrivateRoute = ({ children }) => {
   const { user, loading } = useContext(AuthContext);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      window.location.replace("https://teqaconnect.com/login");
-    }
-  }, [loading, user]);
+  if (loading) return <Loading />;
 
-  if (loading) {
-    return <Loading fullScreen text="Checking your session..." size="lg" />;
-  }
-
-  if (!user) {
-    return <Loading fullScreen text="Redirecting to login..." variant="dots" />;
-  }
+  if (!user) return window.location.href = "https://teqaconnect.com/login";
 
   return children;
-}
+};
+
+export default PrivateRoute;

@@ -1,44 +1,17 @@
 import { createContext, useEffect, useState } from "react";
-import { getCurrentUser } from "../api/auth";
+import { getCurrentUser, logout as apiLogout } from "../api/auth";
 
 export const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const logout = async () => {
-    try {
-      await fetch("https://auth.teqaconnect.com/auth/logout/", {
-        method: "POST",
-        credentials: "include", 
-      });
-    } catch (err) {
-      console.log("Logout error:", err);
-    }
-
-    localStorage.clear();
-    sessionStorage.clear();
-    setUser(null);
-
-    window.location.href = "/login";
-  };
-
-  const loadUser = async () => {
+  const fetchUser = async () => {
     try {
       const res = await getCurrentUser();
-      const userData = res.data;
-
-      if (userData.role !== "STORE") {
-        await logout();
-        return;
-      }
-
-      setUser(userData);
-
+      setUser(res.data);
     } catch (err) {
-      console.log("ERROR:", err.response?.status);
       setUser(null);
     } finally {
       setLoading(false);
@@ -46,11 +19,22 @@ export const AuthProvider = ({ children }) => {
   };
 
   useEffect(() => {
-    loadUser();
+    fetchUser();
   }, []);
 
+  const logout = async () => {
+    try {
+      await apiLogout();
+    } catch (err) {}
+
+    setUser(null);
+    window.location.href = "/https://teqaconnect.com/login";
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, logout }}>
+    <AuthContext.Provider
+      value={{ user, setUser, loading, logout }}
+    >
       {children}
     </AuthContext.Provider>
   );
