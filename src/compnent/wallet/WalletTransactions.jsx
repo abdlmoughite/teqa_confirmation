@@ -1,5 +1,5 @@
 // WalletTransactions.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import {
   ArrowUpRight,
   ArrowDownRight,
@@ -13,11 +13,17 @@ import {
   Clock
 } from "lucide-react";
 import { GetTransfers } from "../../api/auth";
+import { usePublicEntities } from "../../hooks/usePublicEntities";
 
 const TRANSFER_STATUS_CONFIG = {
   pending: { label: "Pending", color: "yellow", icon: Clock, bgColor: "bg-yellow-100 dark:bg-yellow-900/30", textColor: "text-yellow-700 dark:text-yellow-400" },
   success: { label: "Success", color: "green", icon: CheckCircle, bgColor: "bg-green-100 dark:bg-green-900/30", textColor: "text-green-700 dark:text-green-400" },
   failed: { label: "Failed", color: "red", icon: XCircle, bgColor: "bg-red-100 dark:bg-red-900/30", textColor: "text-red-700 dark:text-red-400" }
+};
+
+const formatOwnerType = (type) => {
+  if (!type) return "Wallet account";
+  return String(type).replace(/_/g, " ").toLowerCase().replace(/\b\w/g, (char) => char.toUpperCase());
 };
 
 const WalletTransactions = ({ walletId }) => {
@@ -46,7 +52,7 @@ const WalletTransactions = ({ walletId }) => {
       
       setTransfers(data);
     } catch (err) {
-      console.error("Error fetching transfers:", err);
+      if (process.env.NODE_ENV !== "production") console.warn("Error fetching transfers:", err);
       setError(err.message || "Failed to load transactions");
     } finally {
       setLoading(false);
@@ -56,6 +62,50 @@ const WalletTransactions = ({ walletId }) => {
   useEffect(() => {
     fetchTransfers();
   }, [walletId]);
+
+  const transferEntityRefs = useMemo(
+    () =>
+      transfers.flatMap((transfer) => {
+        const senderType = transfer.sender_wallet?.owner_type || transfer.sender_owner_type;
+        const senderId =
+          transfer.sender_wallet?.owner_id ||
+          transfer.sender_wallet?.num_wallet ||
+          transfer.sender_wallet_number;
+        const receiverType = transfer.receiver_wallet?.owner_type || transfer.receiver_owner_type;
+        const receiverId =
+          transfer.receiver_wallet?.owner_id ||
+          transfer.receiver_wallet?.num_wallet ||
+          transfer.receiver_wallet_number;
+
+        return [
+          senderType && senderId ? { type: senderType, id: senderId } : null,
+          receiverType && receiverId ? { type: receiverType, id: receiverId } : null,
+        ].filter(Boolean);
+      }),
+    [transfers]
+  );
+
+  const { getEntityName, getEntitySubtitle } = usePublicEntities(transferEntityRefs);
+
+  const isOutgoing = (transfer) => {
+    if (!walletId) return true;
+    return (
+      transfer.sender_wallet?.id === walletId ||
+      transfer.sender_wallet?.num_wallet === walletId ||
+      transfer.sender_wallet_number === walletId
+    );
+  };
+
+  const getWalletSideInfo = (transfer, side) => {
+    const wallet = transfer[`${side}_wallet`];
+    const type = wallet?.owner_type || transfer[`${side}_owner_type`];
+    const id = wallet?.owner_id || wallet?.num_wallet || transfer[`${side}_wallet_number`];
+    const apiName = transfer[`${side}_name`] || wallet?.name;
+    return {
+      name: apiName || getEntityName(type, id, side === "sender" ? "Sender" : "Receiver"),
+      subtitle: getEntitySubtitle(type, id, "") || formatOwnerType(type),
+    };
+  };
 
   const formatDate = (dateString) => {
     if (!dateString) return "—";
@@ -78,8 +128,12 @@ const WalletTransactions = ({ walletId }) => {
   };
 
   const filteredTransfers = transfers.filter(t => {
+    const sender = getWalletSideInfo(t, "sender");
+    const receiver = getWalletSideInfo(t, "receiver");
     const matchesSearch = t.reference?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          t.note?.toLowerCase().includes(searchTerm.toLowerCase());
+                          t.note?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          sender.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          receiver.name?.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = statusFilter === "all" || t.status === statusFilter;
     return matchesSearch && matchesStatus;
   });
@@ -152,34 +206,36 @@ const WalletTransactions = ({ walletId }) => {
               </tr>
             </thead>
             <tbody className="divide-y">
-              {filteredTransfers.map(t => (
+              {filteredTransfers.map(t => {
+                const outgoing = isOutgoing(t);
+                const counterparty = getWalletSideInfo(t, outgoing ? "receiver" : "sender");
+
+                return (
                 <tr key={t.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50">
                   <td className="px-4 py-3">
                     <div className="flex items-center gap-2">
                       <div className={`w-7 h-7 rounded-full flex items-center justify-center ${
-                        t.sender_wallet ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20'
+                        outgoing ? 'bg-red-100 dark:bg-red-900/20' : 'bg-green-100 dark:bg-green-900/20'
                       }`}>
-                        {t.sender_wallet ? (
+                        {outgoing ? (
                           <ArrowUpRight size={12} className="text-red-600" />
                         ) : (
                           <ArrowDownRight size={12} className="text-green-600" />
                         )}
                       </div>
-                      <span className="text-sm">{t.sender_wallet ? 'Sent' : 'Received'}</span>
+                      <span className="text-sm">{outgoing ? 'Sent' : 'Received'}</span>
                     </div>
                   </td>
                   <td className="px-4 py-3">
-                    <span className={`font-semibold ${t.sender_wallet ? 'text-red-600' : 'text-green-600'}`}>
-                      {t.sender_wallet ? '-' : '+'}{formatPrice(t.amount, t.currency)}
+                    <span className={`font-semibold ${outgoing ? 'text-red-600' : 'text-green-600'}`}>
+                      {outgoing ? '-' : '+'}{formatPrice(t.amount, t.currency)}
                     </span>
                   </td>
                   <td className="px-4 py-3 hidden md:table-cell">
                     <p className="text-sm text-gray-600 dark:text-gray-400">
-                      {t.sender_wallet ? t.receiver_wallet?.name : t.sender_wallet?.name}
+                      {counterparty.name}
                     </p>
-                    <p className="text-xs text-gray-400 font-mono">
-                      {t.sender_wallet ? t.receiver_wallet?.num_wallet?.slice(0, 12) : t.sender_wallet?.num_wallet?.slice(0, 12)}...
-                    </p>
+                    <p className="text-xs text-gray-400">{counterparty.subtitle}</p>
                   </td>
                   <td className="px-4 py-3 hidden lg:table-cell">
                     <p className="text-xs text-gray-500 font-mono">{t.reference || "—"}</p>
@@ -189,7 +245,8 @@ const WalletTransactions = ({ walletId }) => {
                     <p className="text-xs text-gray-500">{formatDate(t.created_at)}</p>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

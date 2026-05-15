@@ -1,82 +1,62 @@
-// src/components/LanguageSwitcher.jsx
 import { useContext } from "react";
+import { Globe } from "lucide-react";
+
 import { LanguageContext } from "../context/LanguageContext";
-import { GlobeAltIcon } from "@heroicons/react/24/outline";
+import { useToast } from "../context/ToastContext";
+
+const languages = [
+  { code: "en", label: "English", badge: "EN", disabled: false },
+  { code: "fr", label: "French (soon)", badge: "FR", disabled: true },
+  { code: "ar", label: "Arabic (soon)", badge: "AR", disabled: true },
+];
 
 export default function LanguageSwitcher() {
   const { lang, changeLanguage } = useContext(LanguageContext);
+  const toast = useToast();
 
-  // Déterminer le nom complet de la langue
-  const getLanguageName = (code) => {
-    switch (code) {
-      case "fr": return "Français";
-      case "en": return "English";
-      case "ar": return " (soon) العربية";
-      default: return code;
+  const activeLanguage = languages.find((language) => language.code === lang) || languages[0];
+
+  const handleSelect = (language) => {
+    if (language.disabled) {
+      toast.info("Only English is available right now. Other languages are disabled.", "Language unavailable");
+      return;
     }
+    changeLanguage(language.code);
   };
 
   return (
     <div className="relative group">
-      {/* Version avec icône et dropdown */}
-      <div className="flex items-center gap-1 cursor-pointer p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
-        <GlobeAltIcon className="w-5 h-5 text-gray-600 dark:text-gray-400" />
-        <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
-          {getLanguageName(lang)}
-        </span>
-        <svg
-          className="w-4 h-4 text-gray-500 dark:text-gray-400"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
-        >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
-      </div>
+      <button
+        type="button"
+        className="flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 transition hover:bg-slate-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
+        title="Only English is available right now. Other languages are disabled."
+      >
+        <Globe size={16} />
+        <span>{activeLanguage.badge}</span>
+      </button>
 
-      {/* Dropdown menu */}
-      <div className="absolute right-0 mt-1 w-48 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-10">
-        <div className="py-1">
-          {[
-            { code: "fr", label: "Français", flag: "🇫🇷" },
-            { code: "en", label: "English", flag: "🇺🇸" },
-            { code: "ar", label: "العربية (soon) ", flag: "🇸🇦" }
-          ].map((language) => (
-            <button
-  key={language.code}
-  disabled={language.code === "ar"}
-  onClick={() => language.code !== "ar" && changeLanguage(language.code)}
-  className={`w-full flex items-center gap-3 px-4 py-3 text-left transition-colors
-    ${language.code === "ar"
-      ? "opacity-50 cursor-not-allowed"
-      : "hover:bg-gray-100 dark:hover:bg-gray-700"}
-    ${
-      lang === language.code
-        ? "bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400"
-        : "text-gray-700 dark:text-gray-300"
-    }
-  `}
->
-  <span className="text-lg">{language.flag}</span>
-  <span className="flex-1">{language.label}</span>
-
-  {lang === language.code && (
-    <svg
-      className="w-4 h-4 text-blue-600 dark:text-blue-400"
-      fill="currentColor"
-      viewBox="0 0 20 20"
-    >
-      <path
-        fillRule="evenodd"
-        d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-        clipRule="evenodd"
-      />
-    </svg>
-  )}
-</button>
-
-          ))}
-        </div>
+      <div className="invisible absolute right-0 z-20 mt-2 w-56 rounded-lg border border-slate-200 bg-white p-1 opacity-0 shadow-lg transition-all duration-150 group-hover:visible group-hover:opacity-100 dark:border-slate-700 dark:bg-slate-800">
+        <p className="px-3 py-2 text-xs text-slate-500 dark:text-slate-400">
+          Only English is available right now.
+        </p>
+        {languages.map((language) => (
+          <button
+            key={language.code}
+            type="button"
+            disabled={language.disabled}
+            onClick={() => handleSelect(language)}
+            className={`flex w-full items-center gap-3 rounded-md px-3 py-2 text-left text-sm transition ${
+              language.disabled
+                ? "cursor-not-allowed text-slate-400"
+                : "text-slate-700 hover:bg-slate-100 dark:text-slate-200 dark:hover:bg-slate-700"
+            } ${lang === language.code ? "bg-primary-50 text-primary-700 dark:bg-primary-500/10 dark:text-primary-300" : ""}`}
+          >
+            <span className="w-8 rounded bg-slate-100 px-1.5 py-0.5 text-center text-xs font-semibold dark:bg-slate-900">
+              {language.badge}
+            </span>
+            <span>{language.label}</span>
+          </button>
+        ))}
       </div>
     </div>
   );

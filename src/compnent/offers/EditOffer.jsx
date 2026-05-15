@@ -1,6 +1,7 @@
 // EditOffer.jsx
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Tag,
   FileText,
@@ -14,9 +15,14 @@ import {
   ArrowLeft,
   Trash2,
   Eye,
-  Clock
+  Clock,
+  Zap,
+  Shield,
+  AlertTriangle,
+  X,
+  Check
 } from "lucide-react";
-import { GetOffer, UpdateOffer, DeleteOffer } from "../../api/auth";
+import { GetOffer, UpdateOffer, DeleteOffer, CheckDeleteOffer } from "../../api/auth";
 
 /* =========================================================
    CONSTANTS
@@ -27,10 +33,111 @@ const CURRENCIES = [
 ];
 
 const STATUS_OPTIONS = [
-  { value: "active", label: "Active", color: "green", icon: CheckCircle },
-  { value: "inactive", label: "Inactive", color: "gray", icon: XCircle },
-  { value: "archived", label: "Archived", color: "yellow", icon: Clock },
+  { value: "active", label: "Active", color: "emerald", icon: CheckCircle },
+  { value: "inactive", label: "Inactive", color: "slate", icon: XCircle },
+  { value: "archived", label: "Archived", color: "amber", icon: Clock },
 ];
+
+/* =========================================================
+   TOAST COMPONENT
+========================================================= */
+
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 5000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const typeConfig = {
+    error: { icon: AlertCircle, gradient: "from-red-500 to-rose-500" },
+    warning: { icon: AlertTriangle, gradient: "from-amber-500 to-orange-500" },
+    success: { icon: CheckCircle, gradient: "from-emerald-500 to-green-500" }
+  };
+
+  const config = typeConfig[type] || typeConfig.error;
+  const Icon = config.icon;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 50, y: -20 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, x: 50, y: -20 }}
+      className="fixed top-20 right-4 z-50"
+    >
+      <div className={`flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-900 border shadow-xl max-w-md backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 border-gray-200 dark:border-gray-800`}>
+        <div className={`p-1.5 rounded-lg bg-gradient-to-r ${config.gradient} bg-opacity-10`}>
+          <Icon size={18} className="text-white" />
+        </div>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1">{message}</p>
+        <button onClick={onClose} className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors">
+          <X size={16} className="text-gray-500 dark:text-gray-400" />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
+/* =========================================================
+   PREVIEW CARD COMPONENT
+========================================================= */
+
+const PreviewCard = ({ form, statusColor }) => (
+  <motion.div 
+    initial={{ opacity: 0, x: 20 }}
+    animate={{ opacity: 1, x: 0 }}
+    className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-800 dark:via-gray-800/50 dark:to-gray-900 rounded-2xl border border-blue-100 dark:border-gray-700 overflow-hidden sticky top-6 shadow-lg"
+  >
+    <div className="px-5 py-4 border-b border-blue-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Eye size={16} className="text-blue-500" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+            Live Preview
+          </h3>
+        </div>
+        <Zap size={14} className="text-blue-400" />
+      </div>
+    </div>
+    
+    <div className="p-5 space-y-4">
+      {/* Title Preview */}
+      <div className="group">
+        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</span>
+        <p className="font-semibold text-gray-800 dark:text-white mt-1 text-lg">
+          {form.titre || "—"}
+        </p>
+      </div>
+      
+      {/* Description Preview */}
+      <div>
+        <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</span>
+        <div className="mt-2 p-3 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+          <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            {form.description || "—"}
+          </p>
+        </div>
+      </div>
+      
+      {/* Price & Status Preview */}
+      <div className="flex justify-between items-center pt-3 border-t border-blue-100 dark:border-gray-700">
+        <div>
+          <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price</span>
+          <div className="flex items-baseline gap-1 mt-1">
+            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              {form.prix ? parseFloat(form.prix).toLocaleString() : "0"}
+            </span>
+            <span className="text-sm text-gray-500 dark:text-gray-400">
+              {CURRENCIES.find(c => c.value === form.currency)?.symbol || form.currency}
+            </span>
+          </div>
+        </div>
+        <div className={`px-3 py-1.5 rounded-full text-xs font-medium ${statusColor}`}>
+          {STATUS_OPTIONS.find(s => s.value === form.status)?.label || form.status}
+        </div>
+      </div>
+    </div>
+  </motion.div>
+);
 
 /* =========================================================
    VALIDATION SCHEMA
@@ -55,7 +162,7 @@ const validateForm = (form) => {
     errors.description = "Description must not exceed 2000 characters";
   }
 
-  if (!form.prix) {
+  if (!form.prix && form.prix !== 0) {
     errors.prix = "Price is required";
   } else if (isNaN(form.prix) || form.prix <= 0) {
     errors.prix = "Price must be a positive number";
@@ -92,6 +199,16 @@ const EditOffer = () => {
   const [apiError, setApiError] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [deleteCheck, setDeleteCheck] = useState(null);
+  const [checkingDelete, setCheckingDelete] = useState(false);
+
+  /* =========================================================
+     TOAST HELPERS
+  ========================================================= */
+  const showToast = (message, type = "error") => {
+    setToast({ message, type });
+  };
 
   /* =========================================================
      FETCH OFFER DATA
@@ -106,14 +223,7 @@ const EditOffer = () => {
     
     try {
       const response = await GetOffer(id);
-      console.log("Offer data:", response);
-      
-      let offerData = null;
-      if (response.data) {
-        offerData = response.data;
-      } else if (response) {
-        offerData = response;
-      }
+      let offerData = response.data || response;
       
       if (offerData) {
         setForm({
@@ -126,10 +236,53 @@ const EditOffer = () => {
         setOriginalData(offerData);
       }
     } catch (err) {
-      console.error("Error fetching offer:", err);
+      console.warn("Error fetching offer:", err);
       setApiError(err.response?.data?.message || err.message || "Failed to load offer");
     } finally {
       setLoading(false);
+    }
+  };
+
+  /* =========================================================
+     CHECK DELETE AVAILABILITY
+  ========================================================= */
+  const checkDeleteAvailability = async () => {
+    setCheckingDelete(true);
+    
+    try {
+      const response = await CheckDeleteOffer(id);
+      const checkData = response.data || response;
+      setDeleteCheck(checkData);
+      
+      if (checkData.can_delete === true) {
+        setShowDeleteModal(true);
+      } else {
+        showToast(checkData.message || "Cette offre ne peut pas être supprimée", "error");
+      }
+    } catch (err) {
+      const errorMessage = err.response?.data?.message || "Impossible de vérifier si l'offre peut être supprimée";
+      showToast(errorMessage, "error");
+    } finally {
+      setCheckingDelete(false);
+    }
+  };
+
+  /* =========================================================
+     HANDLE DELETE
+  ========================================================= */
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await DeleteOffer(id);
+      showToast("Offre supprimée avec succès", "success");
+      setTimeout(() => navigate("/offers"), 1500);
+    } catch (err) {
+      const errorData = err.response?.data;
+      const errorMessage = errorData?.message || err.message || "Failed to delete offer";
+      showToast(errorMessage, "error");
+      setShowDeleteModal(false);
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -175,7 +328,7 @@ const EditOffer = () => {
     e.preventDefault();
     
     if (!hasChanges()) {
-      setApiError("No changes to save");
+      showToast("No changes to save", "warning");
       return;
     }
     
@@ -208,6 +361,7 @@ const EditOffer = () => {
       if (response.status === 200 || response.status === 201) {
         setSuccess(true);
         setOriginalData({ ...originalData, ...payload });
+        showToast("Offer updated successfully!", "success");
         
         setTimeout(() => {
           setSuccess(false);
@@ -217,96 +371,31 @@ const EditOffer = () => {
         throw new Error(response.data?.message || "Failed to update offer");
       }
     } catch (err) {
-      console.error("API Error:", err);
-      setApiError(err.response?.data?.message || err.message || "Network error. Please try again.");
+      console.warn("API Error:", err);
+      const errorMessage = err.response?.data?.message || err.message || "Network error. Please try again.";
+      setApiError(errorMessage);
+      showToast(errorMessage, "error");
     } finally {
       setSaving(false);
     }
   };
 
   /* =========================================================
-     HANDLE DELETE
+     GET STATUS COLOR
   ========================================================= */
-  const handleDelete = async () => {
-    setDeleting(true);
-    try {
-      await DeleteOffer(id);
-      navigate("/offers");
-    } catch (err) {
-      console.error("Error deleting offer:", err);
-      setApiError(err.response?.data?.message || err.message || "Failed to delete offer");
-      setShowDeleteModal(false);
-    } finally {
-      setDeleting(false);
+  const getStatusColor = (status) => {
+    switch (status) {
+      case 'active': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
+      case 'inactive': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+      case 'archived': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
+      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
   };
 
-  /* =========================================================
-     PREVIEW COMPONENT
-  ========================================================= */
-  const PreviewCard = () => (
-    <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-gray-800 dark:to-gray-900 rounded-xl p-5 border border-blue-100 dark:border-gray-700 sticky top-6">
-      <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
-          Live Preview
-        </h3>
-        <Eye size={14} className="text-blue-400" />
-      </div>
-      
-      <div className="space-y-4">
-        <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Title</span>
-          <p className="font-semibold text-gray-800 dark:text-white mt-1">
-            {form.titre || "—"}
-          </p>
-        </div>
-        
-        <div>
-          <span className="text-xs text-gray-500 dark:text-gray-400">Description</span>
-          <div className="mt-1 p-3 bg-white dark:bg-gray-800/50 rounded-lg">
-            <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap">
-              {form.description || "—"}
-            </p>
-          </div>
-        </div>
-        
-        <div className="flex justify-between items-center pt-3 border-t border-blue-100 dark:border-gray-700">
-          <div>
-            <span className="text-xs text-gray-500 dark:text-gray-400">Price</span>
-            <p className="text-xl font-bold text-blue-600 dark:text-blue-400">
-              {form.prix ? `${parseFloat(form.prix).toLocaleString()} ${CURRENCIES.find(c => c.value === form.currency)?.symbol || form.currency}` : "—"}
-            </p>
-          </div>
-          <div className={`px-3 py-1.5 rounded-full text-xs font-medium ${
-            form.status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-            form.status === 'inactive' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' :
-            'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-          }`}>
-            {form.status}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-
-  /* =========================================================
-     RENDER STATUS BADGE
-  ========================================================= */
-  const renderStatusBadge = (status) => {
-    const config = STATUS_OPTIONS.find(s => s.value === status);
-    if (!config) return null;
-    const Icon = config.icon;
-    
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${
-        status === 'active' ? 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-400' :
-        status === 'inactive' ? 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400' :
-        'bg-yellow-100 text-yellow-700 dark:bg-yellow-900/30 dark:text-yellow-400'
-      }`}>
-        <Icon size={12} />
-        {config.label}
-      </span>
-    );
+  const getStatusIcon = (status) => {
+    const option = STATUS_OPTIONS.find(s => s.value === status);
+    const Icon = option?.icon || CheckCircle;
+    return <Icon size={14} />;
   };
 
   /* =========================================================
@@ -314,9 +403,15 @@ const EditOffer = () => {
   ========================================================= */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 flex items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-blue-500 mx-auto mb-4" />
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 mx-auto mb-4"
+          >
+            <div className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-800 border-t-blue-500 dark:border-t-blue-400" />
+          </motion.div>
           <p className="text-gray-500 dark:text-gray-400">Loading offer...</p>
         </div>
       </div>
@@ -326,29 +421,35 @@ const EditOffer = () => {
   /* =========================================================
      ERROR STATE
   ========================================================= */
-  if (apiError && !loading) {
+  if (apiError && !loading && !originalData) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
+          <motion.div 
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-2xl p-8 text-center"
+          >
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-red-100 dark:bg-red-900/40 flex items-center justify-center">
+              <AlertCircle size={32} className="text-red-500 dark:text-red-400" />
+            </div>
             <h2 className="text-xl font-semibold text-red-800 dark:text-red-300 mb-2">Error Loading Offer</h2>
-            <p className="text-red-700 dark:text-red-400 mb-4">{apiError}</p>
+            <p className="text-red-700 dark:text-red-400 mb-6">{apiError}</p>
             <div className="flex gap-3 justify-center">
               <button
                 onClick={fetchOffer}
-                className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition"
+                className="px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-xl transition-all shadow-md"
               >
                 Try Again
               </button>
               <Link
                 to="/offers"
-                className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition"
+                className="px-5 py-2.5 bg-gray-500 hover:bg-gray-600 text-white rounded-xl transition-all shadow-md"
               >
                 Back to Offers
               </Link>
             </div>
-          </div>
+          </motion.div>
         </div>
       </div>
     );
@@ -358,20 +459,31 @@ const EditOffer = () => {
      MAIN RENDER
   ========================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-6">
-      <div className="max-w-6xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
+
+      <div className="max-w-6xl mx-auto px-4 py-6 md:px-6 md:py-8 lg:px-8 lg:py-10">
         {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <Link
-                to="/offers"
-                className="p-2 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-800 transition"
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8"
+        >
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+            <div className="flex items-start gap-4">
+              <motion.button
+                whileHover={{ scale: 1.05, x: -2 }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigate("/offers")}
+                className="p-2.5 rounded-xl bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 text-gray-600 dark:text-gray-400 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all shadow-sm"
               >
-                <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
-              </Link>
+                <ArrowLeft size={20} />
+              </motion.button>
+              
               <div>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
                   Edit Offer
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -379,58 +491,46 @@ const EditOffer = () => {
                 </p>
               </div>
             </div>
+            
             <div className="flex items-center gap-3">
-              <button
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
                 onClick={() => setShowPreview(!showPreview)}
-                className="lg:hidden inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+                className="lg:hidden inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
               >
                 <Eye size={16} />
                 {showPreview ? "Hide Preview" : "Show Preview"}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(true)}
-                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-red-300 dark:border-red-700 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+              </motion.button>
+              
+              <motion.button
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                onClick={checkDeleteAvailability}
+                disabled={checkingDelete}
+                className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 text-white font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50"
               >
-                <Trash2 size={16} />
+                {checkingDelete ? <Loader2 size={16} className="animate-spin" /> : <Trash2 size={16} />}
                 Delete
-              </button>
+              </motion.button>
             </div>
           </div>
-        </div>
-
-        {/* Success Alert */}
-        {success && (
-          <div className="mb-6 p-4 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-xl animate-slide-down">
-            <div className="flex items-center gap-3">
-              <CheckCircle className="text-green-600 dark:text-green-400" size={20} />
-              <div>
-                <h3 className="font-semibold text-green-800 dark:text-green-300">Success!</h3>
-                <p className="text-sm text-green-700 dark:text-green-400">Offer updated successfully! Redirecting...</p>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* API Error Alert */}
-        {apiError && !success && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl">
-            <div className="flex items-center gap-3">
-              <AlertCircle className="text-red-600 dark:text-red-400" size={20} />
-              <div>
-                <h3 className="font-semibold text-red-800 dark:text-red-300">Error</h3>
-                <p className="text-sm text-red-700 dark:text-red-400">{apiError}</p>
-              </div>
-            </div>
-          </div>
-        )}
+        </motion.div>
 
         <div className="grid lg:grid-cols-2 gap-6">
           {/* Form Section */}
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-            <div className="p-6 border-b border-gray-200 dark:border-gray-800">
-              <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
-                Offer Information
-              </h2>
+          <motion.div 
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
+          >
+            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
+              <div className="flex items-center gap-2">
+                <Shield size={18} className="text-blue-500" />
+                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                  Offer Information
+                </h2>
+              </div>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
                 Edit the details of your offer
               </p>
@@ -440,7 +540,7 @@ const EditOffer = () => {
               {/* Title */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <Tag size={14} className="inline mr-1" />
+                  <Tag size={14} className="inline mr-1.5" />
                   Title <span className="text-red-500">*</span>
                 </label>
                 <input
@@ -451,10 +551,10 @@ const EditOffer = () => {
                   onChange={handleChange}
                   onBlur={handleBlur}
                   className={`
-                    w-full px-4 py-2.5 rounded-lg border transition-all duration-200
+                    w-full px-4 py-2.5 rounded-xl border transition-all duration-200
                     bg-white dark:bg-gray-800
                     text-gray-800 dark:text-white
-                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                     ${touched.titre && errors.titre 
                       ? 'border-red-500 focus:ring-red-500' 
                       : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
@@ -463,19 +563,28 @@ const EditOffer = () => {
                   autoFocus
                 />
                 {touched.titre && errors.titre && (
-                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-1.5 text-xs text-red-500 flex items-center gap-1"
+                  >
                     <AlertCircle size={12} /> {errors.titre}
-                  </p>
+                  </motion.p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">
-                  {form.titre.length}/100 characters
-                </p>
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {form.titre.length}/100 characters
+                  </p>
+                  {form.titre.length > 80 && form.titre.length <= 100 && (
+                    <p className="text-xs text-yellow-500">Getting long</p>
+                  )}
+                </div>
               </div>
 
               {/* Description */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  <FileText size={14} className="inline mr-1" />
+                  <FileText size={14} className="inline mr-1.5" />
                   Description <span className="text-red-500">*</span>
                 </label>
                 <textarea
@@ -486,10 +595,10 @@ const EditOffer = () => {
                   onBlur={handleBlur}
                   rows={6}
                   className={`
-                    w-full px-4 py-2.5 rounded-lg border transition-all duration-200 resize-none
+                    w-full px-4 py-2.5 rounded-xl border transition-all duration-200 resize-none
                     bg-white dark:bg-gray-800
                     text-gray-800 dark:text-white
-                    focus:outline-none focus:ring-2 focus:ring-blue-500
+                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
                     ${touched.description && errors.description 
                       ? 'border-red-500 focus:ring-red-500' 
                       : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
@@ -497,52 +606,68 @@ const EditOffer = () => {
                   `}
                 />
                 {touched.description && errors.description && (
-                  <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mt-1.5 text-xs text-red-500 flex items-center gap-1"
+                  >
                     <AlertCircle size={12} /> {errors.description}
-                  </p>
+                  </motion.p>
                 )}
-                <p className="mt-1 text-xs text-gray-400">
-                  {form.description.length}/2000 characters
-                </p>
+                <div className="flex justify-between mt-1">
+                  <p className="text-xs text-gray-400">
+                    {form.description.length}/2000 characters
+                  </p>
+                  {form.description.length > 1500 && (
+                    <p className="text-xs text-yellow-500">Getting long</p>
+                  )}
+                </div>
               </div>
 
               {/* Price & Currency */}
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    <DollarSign size={14} className="inline mr-1" />
+                    <DollarSign size={14} className="inline mr-1.5" />
                     Price <span className="text-red-500">*</span>
                   </label>
-                  <input
-                    type="number"
-                    name="prix"
-                    placeholder="0.00"
-                    value={form.prix}
-                    onChange={handleChange}
-                    onBlur={handleBlur}
-                    step="0.01"
-                    min="0"
-                    className={`
-                      w-full px-4 py-2.5 rounded-lg border transition-all duration-200
-                      bg-white dark:bg-gray-800
-                      text-gray-800 dark:text-white
-                      focus:outline-none focus:ring-2 focus:ring-blue-500
-                      ${touched.prix && errors.prix 
-                        ? 'border-red-500 focus:ring-red-500' 
-                        : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
-                      }
-                    `}
-                  />
+                  <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">MAD</span>
+                    <input
+                      type="number"
+                      name="prix"
+                      placeholder="0.00"
+                      value={form.prix}
+                      onChange={handleChange}
+                      onBlur={handleBlur}
+                      step="0.01"
+                      min="0"
+                      className={`
+                        w-full pl-16 pr-4 py-2.5 rounded-xl border transition-all duration-200
+                        bg-white dark:bg-gray-800
+                        text-gray-800 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                        ${touched.prix && errors.prix 
+                          ? 'border-red-500 focus:ring-red-500' 
+                          : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                        }
+                      `}
+                    />
+                  </div>
                   {touched.prix && errors.prix && (
-                    <p className="mt-1 text-xs text-red-500 flex items-center gap-1">
+                    <motion.p 
+                      initial={{ opacity: 0, y: -5 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="mt-1.5 text-xs text-red-500 flex items-center gap-1"
+                    >
                       <AlertCircle size={12} /> {errors.prix}
-                    </p>
+                    </motion.p>
                   )}
                 </div>
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                    <Globe size={14} className="inline mr-1" />
+                    <Globe size={14} className="inline mr-1.5" />
                     Currency
                   </label>
                   <select
@@ -550,7 +675,7 @@ const EditOffer = () => {
                     value={form.currency}
                     onChange={handleChange}
                     disabled
-                    className="w-full px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700
+                    className="w-full px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700
                       bg-gray-100 dark:bg-gray-800/50
                       text-gray-500 dark:text-gray-400
                       cursor-not-allowed opacity-75"
@@ -561,7 +686,7 @@ const EditOffer = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1 text-xs text-gray-400">
+                  <p className="mt-1.5 text-xs text-gray-400">
                     Currency cannot be changed
                   </p>
                 </div>
@@ -572,24 +697,22 @@ const EditOffer = () => {
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
                   Status
                 </label>
-                <div className="flex gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {STATUS_OPTIONS.map(option => {
                     const Icon = option.icon;
-                    const colorMap = {
-                      green: "border-green-500 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-400",
-                      gray: "border-gray-500 bg-gray-50 dark:bg-gray-800 text-gray-700 dark:text-gray-400",
-                      yellow: "border-yellow-500 bg-yellow-50 dark:bg-yellow-900/20 text-yellow-700 dark:text-yellow-400"
-                    };
+                    const isSelected = form.status === option.value;
                     
                     return (
-                      <label
+                      <motion.label
                         key={option.value}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         className={`
-                          flex-1 flex items-center justify-center gap-2 px-4 py-2 rounded-lg
+                          flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl
                           cursor-pointer transition-all duration-200 border-2
-                          ${form.status === option.value
-                            ? colorMap[option.color]
-                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
+                          ${isSelected
+                            ? getStatusColor(option.value)
+                            : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600 bg-white dark:bg-gray-800'
                           }
                         `}
                       >
@@ -597,15 +720,15 @@ const EditOffer = () => {
                           type="radio"
                           name="status"
                           value={option.value}
-                          checked={form.status === option.value}
+                          checked={isSelected}
                           onChange={handleChange}
                           className="hidden"
                         />
-                        <Icon size={16} />
+                        <Icon size={14} />
                         <span className="text-sm font-medium">
                           {option.label}
                         </span>
-                      </label>
+                      </motion.label>
                     );
                   })}
                 </div>
@@ -615,20 +738,21 @@ const EditOffer = () => {
               <div className="flex gap-3 pt-4">
                 <Link
                   to="/offers"
-                  className="flex-1 px-4 py-2.5 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition text-center"
+                  className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all text-center font-medium"
                 >
                   Cancel
                 </Link>
-                <button
+                <motion.button
                   type="submit"
+                  whileHover={(!saving && hasChanges()) ? { scale: 1.02 } : {}}
+                  whileTap={(!saving && hasChanges()) ? { scale: 0.98 } : {}}
                   disabled={saving || !hasChanges()}
                   className={`
-                    flex-1 py-2.5 rounded-lg font-medium text-white
-                    transition-all duration-200 transform
-                    flex items-center justify-center gap-2
+                    flex-1 py-2.5 rounded-xl font-medium text-white
+                    transition-all duration-200 flex items-center justify-center gap-2
                     ${saving || !hasChanges()
                       ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 hover:shadow-lg hover:scale-[1.02]'
+                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-md hover:shadow-lg'
                     }
                   `}
                 >
@@ -643,67 +767,109 @@ const EditOffer = () => {
                       Save Changes
                     </>
                   )}
-                </button>
+                </motion.button>
               </div>
               
               {/* Changes indicator */}
-              {hasChanges() && (
-                <p className="text-xs text-yellow-600 dark:text-yellow-400 text-center mt-2">
-                  You have unsaved changes
-                </p>
-              )}
+              <AnimatePresence>
+                {hasChanges() && (
+                  <motion.p 
+                    initial={{ opacity: 0, y: -5 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -5 }}
+                    className="text-xs text-amber-600 dark:text-amber-400 text-center mt-2 flex items-center justify-center gap-1"
+                  >
+                    <AlertTriangle size={12} />
+                    You have unsaved changes
+                  </motion.p>
+                )}
+              </AnimatePresence>
             </form>
-          </div>
+          </motion.div>
 
           {/* Preview Section - Desktop */}
           <div className="hidden lg:block">
-            <PreviewCard />
+            <PreviewCard form={form} statusColor={getStatusColor(form.status)} />
           </div>
         </div>
 
         {/* Preview Section - Mobile */}
-        {showPreview && (
-          <div className="lg:hidden mt-6">
-            <PreviewCard />
-          </div>
-        )}
+        <AnimatePresence>
+          {showPreview && (
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="lg:hidden mt-6"
+            >
+              <PreviewCard form={form} statusColor={getStatusColor(form.status)} />
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 animate-fade-in">
-          <div className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full p-6 shadow-xl animate-slide-down">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center">
-                <Trash2 size={20} className="text-red-600 dark:text-red-400" />
+      <AnimatePresence>
+        {showDeleteModal && deleteCheck?.can_delete === true && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
+            >
+              <div className="relative">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-red-500 to-rose-500" />
+                <div className="p-6">
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
+                      <Trash2 size={22} className="text-red-600 dark:text-red-400" />
+                    </div>
+                    <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Delete Offer</h3>
+                  </div>
+                  
+                  <p className="text-gray-600 dark:text-gray-300 mb-2">
+                    Are you sure you want to delete "<span className="font-semibold text-gray-900 dark:text-white">{originalData?.titre}</span>"?
+                  </p>
+                  <p className="text-sm text-red-600 dark:text-red-400 mb-6 flex items-center gap-1">
+                    <AlertTriangle size={14} />
+                    This action cannot be undone. All data will be permanently removed.
+                  </p>
+                  
+                  <div className="flex gap-3">
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={() => {
+                        setShowDeleteModal(false);
+                        setDeleteCheck(null);
+                      }}
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium"
+                    >
+                      Cancel
+                    </motion.button>
+                    <motion.button
+                      whileHover={{ scale: 1.02 }}
+                      whileTap={{ scale: 0.98 }}
+                      onClick={handleDelete}
+                      disabled={deleting}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-500 to-rose-500 text-white font-medium transition-all disabled:opacity-50 flex items-center justify-center gap-2 shadow-md hover:shadow-lg"
+                    >
+                      {deleting && <Loader2 size={16} className="animate-spin" />}
+                      Delete Permanently
+                    </motion.button>
+                  </div>
+                </div>
               </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Delete Offer</h3>
-            </div>
-            <p className="text-gray-600 dark:text-gray-300 mb-2">
-              Are you sure you want to delete "<span className="font-medium">{originalData?.titre}</span>"?
-            </p>
-            <p className="text-sm text-red-600 dark:text-red-400 mb-6">
-              This action cannot be undone. All data will be permanently removed.
-            </p>
-            <div className="flex gap-3">
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleDelete}
-                disabled={deleting}
-                className="flex-1 px-4 py-2 rounded-lg bg-red-500 hover:bg-red-600 text-white font-medium transition disabled:opacity-50 flex items-center justify-center gap-2"
-              >
-                {deleting && <Loader2 size={16} className="animate-spin" />}
-                Delete Permanently
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

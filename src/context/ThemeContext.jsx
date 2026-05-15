@@ -1,53 +1,39 @@
-// src/context/ThemeContext.jsx
-import { createContext, useEffect, useState, useContext } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 
 export const ThemeContext = createContext();
 
 export default function ThemeProvider({ children }) {
-  const [theme, setTheme] = useState("light");
+  const [theme, setTheme] = useState(() => {
+    const saved = localStorage.getItem("teqa-theme");
+    if (saved) return saved;
+    return window.matchMedia?.("(prefers-color-scheme: dark)")?.matches ? "dark" : "light";
+  });
 
-  // ----------------------------------------------------
-  // APPLY THEME TO <html> (Tailwind compatible)
-  // ----------------------------------------------------
-  const applyTheme = (mode) => {
-    setTheme(mode);
-    localStorage.setItem("theme", mode);
-
-    if (mode === "dark") {
-      document.documentElement.classList.add("dark");
-    } else {
-      document.documentElement.classList.remove("dark");
-    }
-  };
-
-  // ----------------------------------------------------
-  // LOAD THEME ON APP START
-  // ----------------------------------------------------
-  useEffect(() => {
-    const saved = localStorage.getItem("theme");
-
-    if (saved) {
-      applyTheme(saved);
-      return;
-    }
-
-    // Default = light
-    applyTheme("light");
+  const applyTheme = useCallback((mode) => {
+    const nextMode = mode === "dark" ? "dark" : "light";
+    setTheme(nextMode);
+    localStorage.setItem("teqa-theme", nextMode);
+    document.documentElement.classList.toggle("dark", nextMode === "dark");
   }, []);
 
-  // ----------------------------------------------------
-  // Toggle (light <-> dark)
-  // ----------------------------------------------------
-  const toggleTheme = () => {
+  useEffect(() => {
+    applyTheme(theme);
+  }, [applyTheme, theme]);
+
+  const toggleTheme = useCallback(() => {
     applyTheme(theme === "dark" ? "light" : "dark");
-  };
+  }, [applyTheme, theme]);
+
+  const value = useMemo(
+    () => ({ theme, dark: theme === "dark", applyTheme, toggleTheme }),
+    [theme, applyTheme, toggleTheme]
+  );
 
   return (
-    <ThemeContext.Provider value={{ theme, toggleTheme }}>
+    <ThemeContext.Provider value={value}>
       {children}
     </ThemeContext.Provider>
   );
 }
 
-// Helper (optional)
 export const useTheme = () => useContext(ThemeContext);

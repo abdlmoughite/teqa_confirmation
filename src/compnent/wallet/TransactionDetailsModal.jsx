@@ -8,7 +8,9 @@ const TransactionDetailsModal = ({
   formatDate, 
   formatPrice, 
   renderStatusBadge,
-  renderTransactionType 
+  renderTransactionType,
+  getCounterpartyName,
+  getCounterpartySubtitle,
 }) => {
   if (!isOpen || !transaction) return null;
 
@@ -72,9 +74,12 @@ const TransactionDetailsModal = ({
               Contrepartie
             </span>
             <div className="text-right">
-              <p className="text-sm font-medium">{transaction.counterparty_name || "—"}</p>
-              <p className="text-xs text-gray-400 font-mono">{transaction.counterparty_wallet?.slice(0, 16)}...</p>
-              <p className="text-xs text-gray-400">{transaction.counterparty_type || ""}</p>
+              <p className="text-sm font-medium">
+                {getCounterpartyName?.(transaction) || transaction.counterparty_name || "Counterparty"}
+              </p>
+              <p className="text-xs text-gray-400">
+                {getCounterpartySubtitle?.(transaction) || transaction.counterparty_type || ""}
+              </p>
             </div>
           </div>
           

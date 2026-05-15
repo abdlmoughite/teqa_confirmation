@@ -1,0 +1,43 @@
+:root {
+  /* Compatibility layer for legacy classes already used by the app. */
+  --color-primary-mid: var(--color-primary-hover);
+  --color-primary-surface: var(--color-primary-light);
+  --color-accent: var(--color-info);
+  --color-accent-light: var(--color-info-bg);
+  --color-dark-bg: var(--color-primary-dark);
+  --color-neutral: var(--text-muted);
+  --color-neutral-surface: var(--bg-surface-2);
+  --color-danger-surface: var(--color-danger-bg);
+  --color-warning-surface: var(--color-warning-bg);
+  --color-info-surface: var(--color-info-bg);
+  --color-agency-surface: var(--color-primary-light);
+  --color-agency: var(--color-primary-dark);
+  --color-agency-dot: var(--color-primary);
+  --color-agent-dot: var(--color-info);
+  --color-text: var(--text-primary);
+  --color-text-muted: var(--text-secondary);
+  --color-text-soft: var(--text-muted);
+  --color-border: var(--border-color);
+  --color-surface: var(--bg-surface);
+  --color-page: var(--bg-body);
+  --color-sidebar-text: var(--text-secondary);
+  --color-sidebar-hover: var(--bg-hover);
+  --color-overlay: rgba(15, 23, 42, 0.48);
+  --surface-muted: var(--bg-surface-2);
+  --text-soft: var(--text-muted);
+  --font-family-sans: var(--font-body);
+  --font-family-mono: var(--font-mono);
+  --font-size-h1: 2rem;
+  --font-size-h2: 1.5rem;
+  --font-size-h3: 1.25rem;
+  --font-size-body: 0.9375rem;
+  --font-size-label: 0.75rem;
+  --line-height-h1: 1.2;
+  --line-height-h2: 1.3;
+  --line-height-h3: 1.4;
+  --line-height-body: 1.6;
+  --letter-spacing-label: 0.04em;
+  --shadow-soft: var(--shadow-md);
+  --shadow-inset: inset 0 0 0 1px var(--border-color);
+  --shadow-pressed: inset 0 0 0 1px var(--border-strong);
+}

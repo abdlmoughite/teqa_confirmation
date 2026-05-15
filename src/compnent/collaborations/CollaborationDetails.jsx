@@ -1,5 +1,5 @@
 // CollaborationDetails.jsx
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import {
   Handshake,
@@ -26,9 +26,18 @@ import {
   FileText,
   Info,
   Check,
-  X
+  X,
+  Power
 } from "lucide-react";
-import { GetCollaboration, RespondToCollaboration, GetCollaborations } from "../../api/auth";
+import {
+  ActivateCollaboration,
+  DeactivateCollaboration,
+  GetCollaboration,
+  GetCollaborationThread,
+  RespondToCollaboration,
+} from "../../api/auth";
+import { useToast } from "../../context/ToastContext";
+import { usePublicEntities } from "../../hooks/usePublicEntities";
 
 /* =========================================================
    CONSTANTS
@@ -50,6 +59,14 @@ const STATUS_CONFIG = {
     bgColor: "bg-green-100 dark:bg-green-900/30",
     textColor: "text-green-700 dark:text-green-400",
     borderColor: "border-green-200 dark:border-green-800"
+  },
+  inactive: {
+    label: "Inactive",
+    color: "orange",
+    icon: Power,
+    bgColor: "bg-orange-100 dark:bg-orange-900/30",
+    textColor: "text-orange-700 dark:text-orange-400",
+    borderColor: "border-orange-200 dark:border-orange-800"
   },
   rejected: { 
     label: "Rejected", 
@@ -82,6 +99,7 @@ const STATUS_CONFIG = {
 ========================================================= */
 
 const CollaborationDetails = () => {
+  const toast = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
   
@@ -95,6 +113,31 @@ const CollaborationDetails = () => {
   const [counterMessage, setCounterMessage] = useState("");
   const [counterError, setCounterError] = useState("");
   const [activeTab, setActiveTab] = useState("details");
+  const [actionableCollabId, setActionableCollabId] = useState(null);
+  const [profileTarget, setProfileTarget] = useState(null);
+
+  const publicEntityRefs = useMemo(() => {
+    const refs = [];
+    if (collaboration) {
+      refs.push(
+        { type: "STORE", id: collaboration.store_id },
+        { type: collaboration.provider_type, id: collaboration.provider_id },
+        {
+          type: collaboration.deactivated_by_role,
+          id: collaboration.deactivated_by_owner_id,
+        }
+      );
+    }
+    allThreadCollabs.forEach((item) => {
+      refs.push({
+        type: item.created_by_role === "STORE" ? "STORE" : item.provider_type,
+        id: item.created_by_role === "STORE" ? item.store_id : item.provider_id,
+      });
+    });
+    return refs;
+  }, [allThreadCollabs, collaboration]);
+
+  const { getEntity, getEntityName, getEntitySubtitle, getEntityAvatar } = usePublicEntities(publicEntityRefs);
 
   /* =========================================================
      FETCH COLLABORATION AND THREAD
@@ -107,6 +150,10 @@ const CollaborationDetails = () => {
       // Get current collaboration
       const response = await GetCollaboration(id);
       let collabData = response.data || response;
+      collabData = {
+        ...collabData,
+        offer: collabData.offer_details || collabData.offer,
+      };
       setCollaboration(collabData);
       
       // Set initial counter price from offer
@@ -114,31 +161,12 @@ const CollaborationDetails = () => {
         setCounterPrice(collabData.offer.prix.toString());
       }
       
-      // Fetch all collaborations to get the complete thread
-      const allResponse = await GetCollaborations({});
-      let allData = [];
-      if (allResponse.data?.results) {
-        allData = allResponse.data.results;
-      } else if (Array.isArray(allResponse.data)) {
-        allData = allResponse.data;
-      } else if (allResponse.data?.data) {
-        allData = allResponse.data.data;
-      }
-      
-      // Find root ID
-      let rootId = collabData.root_collaboration?.id || collabData.id;
-      if (collabData.root_collaboration && typeof collabData.root_collaboration === 'object') {
-        rootId = collabData.root_collaboration.id;
-      }
-      
-      // Get all collaborations in this thread
-      const threadCollabs = allData.filter(c => {
-        let cRootId = c.root_collaboration?.id || c.id;
-        if (c.root_collaboration && typeof c.root_collaboration === 'object') {
-          cRootId = c.root_collaboration.id;
-        }
-        return cRootId === rootId || c.id === rootId;
-      });
+      const threadResponse = await GetCollaborationThread(collabData.id).catch(() => ({ data: null }));
+      const threadItems = threadResponse.data?.items || [collabData];
+      const threadCollabs = threadItems.map((threadItem) => ({
+        ...threadItem,
+        offer: threadItem.offer_details || threadItem.offer,
+      }));
       
       // Sort by date (oldest first for timeline)
       threadCollabs.sort((a, b) => {
@@ -148,9 +176,18 @@ const CollaborationDetails = () => {
       });
       
       setAllThreadCollabs(threadCollabs);
+
+      const latestPending = [...threadCollabs].reverse().find((item) => item.status === "pending");
+      if (collabData.status === "pending") {
+        setActionableCollabId(collabData.id);
+      } else if (latestPending) {
+        setActionableCollabId(latestPending.id);
+      } else {
+        setActionableCollabId(null);
+      }
       
     } catch (err) {
-      console.error("Error fetching collaboration:", err);
+      if (process.env.NODE_ENV !== "production") console.warn("Error fetching collaboration:", err);
       setError(err.response?.data?.detail || err.message || "Failed to load collaboration");
     } finally {
       setLoading(false);
@@ -165,6 +202,18 @@ const CollaborationDetails = () => {
      HANDLE RESPONSE
   ========================================================= */
   const handleResponse = async (action, priceFinale = null, message = null) => {
+    const hasActiveInThread = allThreadCollabs.some((item) => item.status === "active");
+    if (hasActiveInThread) {
+      setError("Une collaboration de ce groupe est déjà active. Vous ne pouvez plus répondre aux autres demandes.");
+      return;
+    }
+
+    const targetCollabId = actionableCollabId || collaboration?.id;
+    if (!targetCollabId) {
+      setError("No actionable collaboration found.");
+      return;
+    }
+
     setActionLoading(true);
     setError(null);
     
@@ -176,11 +225,16 @@ const CollaborationDetails = () => {
           setActionLoading(false);
           return;
         }
+        if (!message || !message.trim()) {
+          setCounterError("Please add a message for your counter offer");
+          setActionLoading(false);
+          return;
+        }
         payload.price_finale = parseFloat(priceFinale);
-        if (message) payload.message = message;
+        payload.message = message.trim();
       }
       
-      await RespondToCollaboration(id, payload);
+      await RespondToCollaboration(targetCollabId, payload);
       await fetchCollaboration();
       
       if (action === "counter") {
@@ -188,9 +242,53 @@ const CollaborationDetails = () => {
         setCounterMessage("");
         setCounterError("");
       }
+      toast.success(
+        action === "counter" ? "Counter offer sent." : `Collaboration ${action}ed successfully.`,
+        "Response saved"
+      );
     } catch (err) {
-      console.error("Error responding:", err);
-      setError(err.response?.data?.detail || err.message || "Failed to process response");
+      if (process.env.NODE_ENV !== "production") console.warn("Error responding:", err);
+      const message = err.response?.data?.detail || err.message || "Failed to process response";
+      setError(message);
+      toast.error(message, "Response failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleDeactivate = async () => {
+    if (!collaboration?.id || collaboration.status !== "active") {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await DeactivateCollaboration(collaboration.id);
+      await fetchCollaboration();
+      toast.success("Collaboration deactivated.", "Status updated");
+    } catch (err) {
+      const message = err.response?.data?.detail || "Failed to deactivate collaboration";
+      setError(message);
+      toast.error(message, "Action failed");
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleActivate = async () => {
+    if (!collaboration?.id || collaboration.status !== "inactive") {
+      return;
+    }
+
+    setActionLoading(true);
+    try {
+      await ActivateCollaboration(collaboration.id);
+      await fetchCollaboration();
+      toast.success("Collaboration reactivated.", "Status updated");
+    } catch (err) {
+      const message = err.response?.data?.detail || "Failed to activate collaboration";
+      setError(message);
+      toast.error(message, "Action failed");
     } finally {
       setActionLoading(false);
     }
@@ -200,8 +298,8 @@ const CollaborationDetails = () => {
      UTILITIES
   ========================================================= */
   const canRespond = () => {
-    if (!collaboration) return false;
-    return collaboration.status === "pending" || collaboration.status === "countered";
+    const hasActiveInThread = allThreadCollabs.some((item) => item.status === "active");
+    return Boolean(actionableCollabId) && !hasActiveInThread;
   };
 
   const formatDate = (dateString) => {
@@ -262,9 +360,27 @@ const CollaborationDetails = () => {
 
   const getSenderInfo = (collab) => {
     if (collab.created_by_role === "STORE") {
-      return { type: "store", label: "Store", icon: Store, color: "blue", bgColor: "bg-blue-50 dark:bg-blue-900/20", textColor: "text-blue-700 dark:text-blue-300" };
+      return {
+        type: "store",
+        label: getEntityName("STORE", collab.store_id, "Store"),
+        subtitle: getEntitySubtitle("STORE", collab.store_id, "Store"),
+        avatar: getEntityAvatar("STORE", collab.store_id),
+        icon: Store,
+        color: "blue",
+        bgColor: "bg-blue-50 dark:bg-blue-900/20",
+        textColor: "text-blue-700 dark:text-blue-300",
+      };
     }
-    return { type: "agency", label: "You", icon: User, color: "green", bgColor: "bg-green-50 dark:bg-green-900/20", textColor: "text-green-700 dark:text-green-300" };
+    return {
+      type: "agency",
+      label: getEntityName(collab.provider_type, collab.provider_id, "Provider"),
+      subtitle: getEntitySubtitle(collab.provider_type, collab.provider_id, "Provider"),
+      avatar: getEntityAvatar(collab.provider_type, collab.provider_id),
+      icon: User,
+      color: "green",
+      bgColor: "bg-green-50 dark:bg-green-900/20",
+      textColor: "text-green-700 dark:text-green-300",
+    };
   };
 
   if (loading) {
@@ -303,12 +419,23 @@ const CollaborationDetails = () => {
   const isStoreRequest = collaboration.created_by_role === "STORE";
   const currentSender = getSenderInfo(collaboration);
   const needsAction = canRespond();
+  const hasActiveInThread = allThreadCollabs.some((item) => item.status === "active");
+  const storeName = getEntityName("STORE", collaboration.store_id, "Store");
+  const storeSubtitle = getEntitySubtitle("STORE", collaboration.store_id, "Store");
+  const storeAvatar = getEntityAvatar("STORE", collaboration.store_id);
+  const providerName = getEntityName(collaboration.provider_type, collaboration.provider_id, "Provider");
+  const providerSubtitle = getEntitySubtitle(collaboration.provider_type, collaboration.provider_id, collaboration.provider_type?.replace("_", " "));
+  const deactivatedByName = getEntityName(
+    collaboration.deactivated_by_role,
+    collaboration.deactivated_by_owner_id,
+    collaboration.deactivated_by_role
+  );
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
+    <div className="page-shell px-1 py-2">
       {/* Header */}
-      <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 sticky top-0 z-10">
-        <div className="max-w-6xl mx-auto px-6 py-4">
+      <div className="page-header-card sticky top-0 z-10">
+        <div className="px-1 py-1">
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <Link to="/collaborations" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
@@ -321,8 +448,8 @@ const CollaborationDetails = () => {
                   </h1>
                   {renderStatusBadge(collaboration.status, "md")}
                 </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono">
-                  ID: {collaboration.id?.slice(0, 8)}...
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                  Store: {storeName} - Provider: {providerName}
                 </p>
               </div>
             </div>
@@ -336,7 +463,7 @@ const CollaborationDetails = () => {
         </div>
       </div>
 
-      <div className="max-w-6xl mx-auto px-6 py-6">
+      <div className="px-1 py-2">
         {/* Tabs */}
         <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-800">
           <button
@@ -486,9 +613,25 @@ const CollaborationDetails = () => {
                     </div>
                   </div>
                   <div className="p-5">
-                    <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                      <p className="text-xs text-gray-500 mb-1">Store ID</p>
-                      <p className="text-sm font-mono">{collaboration.store_id}</p>
+                    <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
+                      <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-lg bg-blue-100 text-sm font-semibold text-blue-700">
+                        {storeAvatar ? (
+                          <img src={storeAvatar} alt={storeName} className="h-full w-full object-cover" />
+                        ) : (
+                          storeName?.charAt(0) || "S"
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{storeName}</p>
+                        <p className="truncate text-xs text-gray-500">{storeSubtitle}</p>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setProfileTarget({ type: "STORE", id: collaboration.store_id })}
+                        className="ml-auto rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                      >
+                        View
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -497,10 +640,10 @@ const CollaborationDetails = () => {
 
             {activeTab === "history" && (
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+                <div className="card-header">
                   <div className="flex items-center gap-2">
-                    <History size={18} className="text-blue-500" />
-                    <h2 className="font-semibold text-gray-800 dark:text-white">Complete Thread History</h2>
+                    <History size={18} className="text-primary-600 dark:text-primary-400" />
+                    <h2 className="font-semibold text-app-strong">Historique complet COD</h2>
                     <span className="text-xs text-gray-400">(Parent → Last)</span>
                   </div>
                 </div>
@@ -512,10 +655,7 @@ const CollaborationDetails = () => {
                       <p>No history available</p>
                     </div>
                   ) : (
-                    <div className="relative">
-                      {/* Timeline line */}
-                      <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                      
+                    <div className="space-y-4">
                       <div className="space-y-4">
                         {allThreadCollabs.map((collab, idx) => {
                           const isLast = idx === allThreadCollabs.length - 1;
@@ -523,29 +663,30 @@ const CollaborationDetails = () => {
                           const sender = getSenderInfo(collab);
                           const isInitial = collab.kind === "initial";
                           const isCounter = collab.kind === "counter";
+                          const isCurrent = collab.id === collaboration.id;
+                          const initials = (sender.label || collab.created_by_role || "C").slice(0, 2).toUpperCase();
                           
                           return (
-                            <div key={collab.id} className="relative flex gap-3">
+                            <div key={collab.id} className={`collab-timeline-item ${isCurrent ? "current" : ""}`}>
                               {/* Timeline dot */}
-                              <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${sender.bgColor}`}>
-                                <sender.icon size={16} className={`text-${sender.color}-600`} />
+                              <div className="profile-avatar-initials !h-9 !w-9 !overflow-hidden !rounded-full !text-xs">
+                                {sender.avatar ? (
+                                  <img src={sender.avatar} alt={sender.label} className="h-full w-full object-cover" />
+                                ) : (
+                                  initials
+                                )}
                               </div>
                               
                               {/* Content */}
-                              <div className={`flex-1 p-3 rounded-lg ${
-                                isLast 
-                                  ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm' 
-                                  : 'bg-gray-50 dark:bg-gray-800/50'
-                              }`}>
+                              <div className="flex-1 rounded-[var(--radius-lg)] border border-app bg-app-surface p-4 shadow-card">
                                 <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs font-medium text-gray-500">
                                       {isInitial ? '📋 Initial Request' : isCounter ? `🔄 Counter Offer #${idx}` : `📝 Update #${idx}`}
                                     </span>
-                                    <span className={`text-xs px-2 py-0.5 rounded-full ${sender.bgColor} ${sender.textColor}`}>
-                                      {sender.label}
-                                    </span>
+                                    <span className="badge badge-primary">{isFirst ? `Root parent: ${sender.label}` : sender.label}</span>
                                     {renderStatusBadge(collab.status, "sm")}
+                                    {isCurrent ? <span className="badge badge-info">Actuelle</span> : null}
                                   </div>
                                   <span className="text-xs text-gray-400" title={formatDate(collab.created_at)}>
                                     {formatShortDate(collab.created_at)}
@@ -604,6 +745,8 @@ const CollaborationDetails = () => {
                     <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
                       collaboration.status === "active" 
                         ? 'bg-green-100 dark:bg-green-900/30 text-green-700' 
+                        : collaboration.status === "inactive"
+                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700'
                         : collaboration.status === "pending" 
                         ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700'
                         : collaboration.status === "countered"
@@ -641,8 +784,8 @@ const CollaborationDetails = () => {
 
             {/* Action Buttons */}
             {needsAction && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="p-5">
+              <div className="card">
+                <div className="card-body">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                     <Reply size={16} />
                     Respond to Request
@@ -677,6 +820,82 @@ const CollaborationDetails = () => {
               </div>
             )}
 
+            {!needsAction && collaboration.status === "pending" && hasActiveInThread && (
+              <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 overflow-hidden">
+                <div className="p-5">
+                  <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+                    <CheckCircle size={16} />
+                    Réponse verrouillée
+                  </h3>
+                  <p className="text-sm text-amber-700 dark:text-amber-300">
+                    Une autre collaboration de ce groupe parent est déjà active.
+                  </p>
+                </div>
+              </div>
+            )}
+
+            {collaboration.status === "active" && (
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div className="p-5">
+                  <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                    <Power size={16} />
+                    Gestion collaboration
+                  </h3>
+                  <button
+                    onClick={handleDeactivate}
+                    disabled={actionLoading}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition disabled:opacity-60"
+                  >
+                    {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
+                    Désactiver cette collaboration active
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {collaboration.status === "inactive" && (
+              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800 overflow-hidden">
+                <div className="p-5 space-y-2">
+                  <h3 className="font-semibold text-orange-700 dark:text-orange-300 mb-1 flex items-center gap-2">
+                    <Power size={16} />
+                    Collaboration inactive
+                  </h3>
+                  <p className="text-xs text-gray-500">
+                    This collaboration was deactivated.
+                  </p>
+                  {collaboration.deactivated_at && (
+                    <p className="text-xs text-gray-500">
+                      Deactivated at: {formatDate(collaboration.deactivated_at)}
+                    </p>
+                  )}
+                  <button
+                    onClick={handleActivate}
+                    disabled={actionLoading}
+                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition disabled:opacity-60"
+                  >
+                    {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
+                    Réactiver cette collaboration
+                  </button>
+                </div>
+              </div>
+            )}
+
+            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="p-5">
+                <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
+                  <MessageSquare size={16} />
+                  Messagerie
+                </h3>
+                <Link
+                  to={`/messages?receiver_type=STORE&receiver_id=${collaboration.store_id}&collaboration_id=${collaboration.id}&offer_id=${collaboration.offer?.id || ""}&subject=${encodeURIComponent(collaboration.offer?.titre || "Collaboration chat")}`}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition"
+                >
+                  <MessageSquare size={16} />
+                  Ouvrir la conversation
+                </Link>
+              </div>
+            </div>
+
             {/* Info Card */}
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
               <div className="p-4 space-y-3">
@@ -685,8 +904,18 @@ const CollaborationDetails = () => {
                   <span className="text-sm font-medium">{collaboration.provider_type?.replace("_", " ")}</span>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-xs text-gray-500 uppercase">Provider ID</span>
-                  <span className="text-xs font-mono">{collaboration.provider_id?.slice(0, 12)}...</span>
+                  <span className="text-xs text-gray-500 uppercase">Provider</span>
+                  <span className="text-right text-xs font-medium">
+                    {providerName}
+                    <span className="block text-[11px] text-gray-400">{providerSubtitle}</span>
+                    <button
+                      type="button"
+                      onClick={() => setProfileTarget({ type: collaboration.provider_type, id: collaboration.provider_id })}
+                      className="mt-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                    >
+                      View
+                    </button>
+                  </span>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 uppercase">Store Acceptance</span>
@@ -704,6 +933,15 @@ const CollaborationDetails = () => {
                     <Clock size={16} className="text-yellow-500" />
                   )}
                 </div>
+                {collaboration.deactivated_by_role && (
+                  <div className="flex justify-between items-center">
+                    <span className="text-xs text-gray-500 uppercase">Deactivated By</span>
+                    <span className="text-right text-xs font-medium">
+                      {deactivatedByName}
+                      <span className="block text-[11px] text-gray-400">{collaboration.deactivated_by_role}</span>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -716,7 +954,7 @@ const CollaborationDetails = () => {
                     Assignment Sources
                   </h4>
                   <div className="flex flex-wrap gap-1">
-                    {collaboration.get_source_ids?.().map((source, idx) => (
+                    {(collaboration.source_ids || []).map((source, idx) => (
                       <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
                         {source}
                       </span>
@@ -728,6 +966,12 @@ const CollaborationDetails = () => {
           </div>
         </div>
       </div>
+      <PublicEntityProfileModal
+        target={profileTarget}
+        entity={profileTarget ? getEntity(profileTarget.type, profileTarget.id) : null}
+        fallbackName={profileTarget ? getEntityName(profileTarget.type, profileTarget.id) : ""}
+        onClose={() => setProfileTarget(null)}
+      />
 
       {/* Counter Offer Modal */}
       {showCounterModal && (
@@ -761,7 +1005,7 @@ const CollaborationDetails = () => {
               
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Message (Optional)
+                  Message <span className="text-red-500">*</span>
                 </label>
                 <textarea
                   rows={3}
@@ -792,6 +1036,66 @@ const CollaborationDetails = () => {
           </div>
         </div>
       )}
+    </div>
+  );
+};
+
+const PublicEntityProfileModal = ({ target, entity, fallbackName, onClose }) => {
+  if (!target) return null;
+
+  const profile = entity?.profile || {};
+  const user = entity?.user || {};
+  const displayName = entity?.display_name || fallbackName || "Profile";
+  const subtitle = entity?.subtitle || user.role?.replace("_", " ") || "Profile";
+  const avatar = entity?.avatar || user.avatar;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
+            Close
+          </button>
+        </div>
+        <div className="p-5">
+          <div className="flex items-center gap-4">
+            <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl bg-blue-100 text-xl font-bold text-blue-700">
+              {avatar ? <img src={avatar} alt={displayName} className="h-full w-full object-cover" /> : displayName.charAt(0)}
+            </div>
+            <div className="min-w-0">
+              <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">{displayName}</p>
+              <p className="truncate text-sm text-gray-500">{subtitle}</p>
+            </div>
+          </div>
+
+          {!entity ? (
+            <div className="mt-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
+              Profile details are not available yet.
+            </div>
+          ) : (
+            <div className="mt-5 space-y-3 text-sm">
+              <ProfileLine label="Name" value={displayName} />
+              <ProfileLine label="Role" value={user.role?.replace("_", " ")} />
+              <ProfileLine label="City" value={user.city} />
+              <ProfileLine label="Country" value={user.country} />
+              <ProfileLine label="Activity" value={profile.activity_sector || profile.industry || profile.skills} />
+              <ProfileLine label="Status" value={profile.availability_status || (profile.is_verified_agency ? "Verified" : null)} />
+              <ProfileLine label="Website" value={profile.website || profile.portfolio_url} />
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const ProfileLine = ({ label, value }) => {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between gap-4 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-right font-medium text-gray-800 dark:text-gray-100">{value}</span>
     </div>
   );
 };

@@ -1,70 +1,174 @@
-// AgencyCommissions.jsx
-import { useState, useEffect } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-  TrendingUp,
-  RefreshCw,
-  Loader2,
   AlertCircle,
-  DollarSign,
-  Calendar,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  Search,
+  CheckCircle2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  FileText,
-  AlertTriangle,
-  Info,
-  Wallet,
-  Receipt
+  Clock3,
+  Eye,
+  Loader2,
+  RefreshCw,
+  Search,
+  Wallet2,
+  XCircle,
+  TrendingUp,
+  DollarSign,
+  Calendar,
+  Filter,
+  Zap,
+  Shield,
+  ArrowUpRight,
+  ArrowDownRight,
+  Package,
+  User,
+  Building2
 } from "lucide-react";
-import { GetCommissions, GetPaymentAttempts } from "../../api/auth";
+import { GetCommissionStats, GetCommissions, GetPaymentAttempts } from "../../api/auth";
 
 /* =========================================================
    CONSTANTS
 ========================================================= */
 
-const COMMISSION_STATUS_CONFIG = {
-  pending_payment: { 
-    label: "En attente", 
-    color: "yellow", 
-    icon: Clock,
-    bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
-    textColor: "text-yellow-700 dark:text-yellow-400"
+const STATUS_META = {
+  pending_payment: {
+    label: "Pending payment",
+    icon: Clock3,
+    chip: "bg-amber-50 text-amber-700 dark:bg-amber-500/10 dark:text-amber-400 border border-amber-200 dark:border-amber-500/20",
+    gradient: "from-amber-500 to-orange-500"
   },
-  processing_payment: { 
-    label: "En traitement", 
-    color: "blue", 
+  processing_payment: {
+    label: "Processing",
     icon: RefreshCw,
-    bgColor: "bg-blue-100 dark:bg-blue-900/30",
-    textColor: "text-blue-700 dark:text-blue-400"
+    chip: "bg-blue-50 text-blue-700 dark:bg-blue-500/10 dark:text-blue-400 border border-blue-200 dark:border-blue-500/20",
+    gradient: "from-blue-500 to-indigo-500"
   },
-  paid: { 
-    label: "Payé", 
-    color: "green", 
-    icon: CheckCircle,
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    textColor: "text-green-700 dark:text-green-400"
+  paid: {
+    label: "Paid",
+    icon: CheckCircle2,
+    chip: "bg-emerald-50 text-emerald-700 dark:bg-emerald-500/10 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-500/20",
+    gradient: "from-emerald-500 to-green-500"
   },
-  payment_failed: { 
-    label: "Échoué", 
-    color: "red", 
+  payment_failed: {
+    label: "Payment failed",
     icon: XCircle,
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    textColor: "text-red-700 dark:text-red-400"
+    chip: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400 border border-rose-200 dark:border-rose-500/20",
+    gradient: "from-rose-500 to-red-500"
   },
-  cancelled: { 
-    label: "Annulé", 
-    color: "gray", 
+  cancelled: {
+    label: "Cancelled",
     icon: XCircle,
-    bgColor: "bg-gray-100 dark:bg-gray-800",
-    textColor: "text-gray-600 dark:text-gray-400"
-  }
+    chip: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border border-slate-200 dark:border-slate-700",
+    gradient: "from-slate-500 to-gray-500"
+  },
 };
 
 const ITEMS_PER_PAGE = 10;
+
+/* =========================================================
+   UTILITY FUNCTIONS
+========================================================= */
+
+const toArray = (payload) => {
+  if (Array.isArray(payload)) return payload;
+  if (Array.isArray(payload?.results)) return payload.results;
+  if (Array.isArray(payload?.data)) return payload.data;
+  return [];
+};
+
+const formatMoney = (value, currency = "MAD") =>
+  `${Number.parseFloat(value || 0).toLocaleString("fr-FR")} ${currency}`;
+
+const formatDateTime = (value) => {
+  if (!value) return "-";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat("fr-FR", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+};
+
+/* =========================================================
+   COMPONENTS
+========================================================= */
+
+const StatusChip = ({ status }) => {
+  const meta = STATUS_META[status] || STATUS_META.pending_payment;
+  const Icon = meta.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${meta.chip}`}>
+      <Icon size={12} className={status === "processing_payment" ? "animate-spin" : ""} />
+      {meta.label}
+    </span>
+  );
+};
+
+const StatCard = ({ label, value, sub, icon: Icon, trend, trendValue }) => (
+  <motion.div 
+    whileHover={{ scale: 1.02, y: -2 }}
+    className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-5 shadow-sm hover:shadow-md transition-all duration-200"
+  >
+    <div className="flex items-start justify-between">
+      <div>
+        <p className="text-xs uppercase tracking-wider text-gray-500 dark:text-gray-400">{label}</p>
+        <p className="mt-2 text-2xl font-bold text-gray-900 dark:text-white">{value}</p>
+        {sub && <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">{sub}</p>}
+        {trend && (
+          <div className="flex items-center gap-1 mt-2">
+            {trend === "up" ? (
+              <ArrowUpRight size={12} className="text-emerald-500" />
+            ) : (
+              <ArrowDownRight size={12} className="text-rose-500" />
+            )}
+            <span className={`text-xs ${trend === "up" ? "text-emerald-600 dark:text-emerald-400" : "text-rose-600 dark:text-rose-400"}`}>
+              {trendValue}
+            </span>
+          </div>
+        )}
+      </div>
+      {Icon && (
+        <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
+          <Icon size={20} className="text-blue-500" />
+        </div>
+      )}
+    </div>
+  </motion.div>
+);
+
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(onClose, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const typeConfig = {
+    success: { icon: CheckCircle2, gradient: "from-emerald-500 to-green-500" },
+    error: { icon: AlertCircle, gradient: "from-rose-500 to-red-500" }
+  };
+  const config = typeConfig[type];
+  const Icon = config?.icon || CheckCircle2;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: 50, y: -20 }}
+      animate={{ opacity: 1, x: 0, y: 0 }}
+      exit={{ opacity: 0, x: 50, y: -20 }}
+      className="fixed top-20 right-4 z-50"
+    >
+      <div className={`flex items-center gap-3 p-3 rounded-xl bg-white dark:bg-gray-900 border shadow-xl border-gray-200 dark:border-gray-800`}>
+        <div className={`p-1 rounded-lg bg-gradient-to-r ${config?.gradient}`}>
+          <Icon size={14} className="text-white" />
+        </div>
+        <p className="text-sm font-medium text-gray-800 dark:text-gray-200">{message}</p>
+      </div>
+    </motion.div>
+  );
+};
 
 /* =========================================================
    MAIN COMPONENT
@@ -72,540 +176,556 @@ const ITEMS_PER_PAGE = 10;
 
 const AgencyCommissions = () => {
   const [commissions, setCommissions] = useState([]);
+  const [statsData, setStatsData] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
+  const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedCommission, setSelectedCommission] = useState(null);
-  const [paymentAttempts, setPaymentAttempts] = useState([]);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
-  const [showAttemptsModal, setShowAttemptsModal] = useState(false);
-  const [loadingAttempts, setLoadingAttempts] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [page, setPage] = useState(1);
+  const [openModal, setOpenModal] = useState(false);
+  const [activeCommission, setActiveCommission] = useState(null);
+  const [attempts, setAttempts] = useState([]);
+  const [attemptsLoading, setAttemptsLoading] = useState(false);
+  const [toast, setToast] = useState(null);
 
-  /* =========================================================
-     FETCH DATA
-  ========================================================= */
-  const fetchCommissions = async () => {
-    setLoading(true);
-    setError(null);
-    
+  const showToast = (message, type = "success") => {
+    setToast({ message, type });
+  };
+
+  const fetchData = async ({ silent = false } = {}) => {
+    if (silent) {
+      setRefreshing(true);
+    } else {
+      setLoading(true);
+    }
+    setError("");
+
     try {
       const params = {};
       if (statusFilter !== "all") params.status = statusFilter;
-      
-      const response = await GetCommissions(params);
-      let commissionsData = [];
-      if (response.data?.results) {
-        commissionsData = response.data.results;
-      } else if (Array.isArray(response.data)) {
-        commissionsData = response.data;
+
+      const [commRes, statsRes] = await Promise.allSettled([
+        GetCommissions(params),
+        GetCommissionStats(),
+      ]);
+
+      if (commRes.status !== "fulfilled") {
+        throw commRes.reason;
       }
-      setCommissions(commissionsData);
-      
+
+      const commRaw = toArray(commRes.value?.data || commRes.value);
+      setCommissions(commRaw);
+
+      if (statsRes.status === "fulfilled" && statsRes.value?.data?.success) {
+        setStatsData(statsRes.value.data);
+      } else {
+        setStatsData(null);
+      }
     } catch (err) {
-      console.error("Error fetching commissions:", err);
-      setError(err.response?.data?.message || "Impossible de charger les commissions");
+      setError(err?.response?.data?.detail || err?.response?.data?.message || "Impossible de charger les commissions.");
     } finally {
       setLoading(false);
+      setRefreshing(false);
     }
   };
 
   useEffect(() => {
-    fetchCommissions();
+    fetchData();
   }, [statusFilter]);
 
-  /* =========================================================
-     FETCH PAYMENT ATTEMPTS
-  ========================================================= */
-  const fetchPaymentAttempts = async (commissionId) => {
-    setLoadingAttempts(true);
-    try {
-      const response = await GetPaymentAttempts(commissionId);
-      let attemptsData = [];
-      if (response.data?.results) {
-        attemptsData = response.data.results;
-      } else if (Array.isArray(response.data)) {
-        attemptsData = response.data;
-      }
-      setPaymentAttempts(attemptsData);
-    } catch (err) {
-      console.error("Error fetching payment attempts:", err);
-    } finally {
-      setLoadingAttempts(false);
+  // Filter commissions
+  const filteredCommissions = useMemo(() => {
+    let filtered = [...commissions];
+    
+    // Apply search filter
+    if (searchTerm.trim()) {
+      const q = searchTerm.trim().toLowerCase();
+      filtered = filtered.filter(commission => 
+        commission.order_id?.toLowerCase().includes(q) ||
+        commission.collaboration?.offer?.titre?.toLowerCase().includes(q) ||
+        commission.provider_type?.toLowerCase().includes(q)
+      );
     }
-  };
+    
+    return filtered;
+  }, [commissions, searchTerm]);
 
-  /* =========================================================
-     FILTERS & PAGINATION
-  ========================================================= */
-  const filteredCommissions = commissions.filter(commission => {
-    const matchesSearch = 
-      commission.order_id?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      commission.collaboration?.offer?.titre?.toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesSearch;
-  });
-
-  const totalPages = Math.ceil(filteredCommissions.length / ITEMS_PER_PAGE);
+  // Pagination
+  const totalPages = Math.max(1, Math.ceil(filteredCommissions.length / ITEMS_PER_PAGE));
   const paginatedCommissions = filteredCommissions.slice(
-    (currentPage - 1) * ITEMS_PER_PAGE,
-    currentPage * ITEMS_PER_PAGE
+    (page - 1) * ITEMS_PER_PAGE,
+    page * ITEMS_PER_PAGE
   );
 
-  /* =========================================================
-     STATS
-  ========================================================= */
-  const stats = {
-    total: commissions.length,
-    pending: commissions.filter(c => c.status === "pending_payment").length,
-    paid: commissions.filter(c => c.status === "paid").length,
-    failed: commissions.filter(c => c.status === "payment_failed").length,
-    totalEarned: commissions.filter(c => c.status === "paid").reduce((sum, c) => sum + parseFloat(c.commission_provider), 0),
-    pendingAmount: commissions.filter(c => c.status === "pending_payment").reduce((sum, c) => sum + parseFloat(c.commission_provider), 0)
-  };
+  useEffect(() => {
+    if (page > totalPages) setPage(totalPages);
+  }, [page, totalPages]);
 
-  /* =========================================================
-     UTILITIES
-  ========================================================= */
-  const formatDate = (dateString) => {
-    if (!dateString) return "—";
+  // Stats calculation
+  const stats = useMemo(() => {
+    const paid = commissions.filter((c) => c.status === "paid");
+    const pending = commissions.filter((c) => c.status === "pending_payment");
+    const failed = commissions.filter((c) => c.status === "payment_failed");
+
+    return {
+      count: commissions.length,
+      paidCount: paid.length,
+      pendingCount: pending.length,
+      failedCount: failed.length,
+      paidAmount: paid.reduce((sum, c) => sum + Number.parseFloat(c.commission_provider || 0), 0),
+      pendingAmount: pending.reduce((sum, c) => sum + Number.parseFloat(c.commission_provider || 0), 0),
+      totalAmount: commissions.reduce((sum, c) => sum + Number.parseFloat(c.commission_provider || 0), 0),
+    };
+  }, [commissions]);
+
+  const openCommissionDetails = async (commission) => {
+    setActiveCommission(commission);
+    setOpenModal(true);
+    setAttemptsLoading(true);
+    setAttempts([]);
+
     try {
-      const date = new Date(dateString);
-      return new Intl.DateTimeFormat('fr-FR', {
-        year: 'numeric',
-        month: 'long',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
-      }).format(date);
+      const response = await GetPaymentAttempts(commission.id);
+      setAttempts(toArray(response?.data || response));
     } catch {
-      return dateString;
+      setAttempts([]);
+    } finally {
+      setAttemptsLoading(false);
     }
-  };
-
-  const formatPrice = (price, currency = "MAD") => {
-    return `${parseFloat(price).toLocaleString('fr-FR')} ${currency}`;
-  };
-
-  const renderStatusBadge = (status) => {
-    const config = COMMISSION_STATUS_CONFIG[status] || COMMISSION_STATUS_CONFIG.pending_payment;
-    const Icon = config.icon;
-    
-    return (
-      <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}>
-        <Icon size={12} />
-        {config.label}
-      </span>
-    );
-  };
-
-  const openDetails = async (commission) => {
-    setSelectedCommission(commission);
-    await fetchPaymentAttempts(commission.id);
-    setShowDetailsModal(true);
   };
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center py-20">
-        <Loader2 size={40} className="animate-spin text-blue-500 mb-4" />
-        <p className="text-gray-500 dark:text-gray-400">Chargement des commissions...</p>
-      </div>
-    );
-  }
-
-  if (error) {
-    return (
-      <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-6 text-center">
-        <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-        <h3 className="text-lg font-semibold text-red-800 dark:text-red-300 mb-2">Erreur</h3>
-        <p className="text-red-700 dark:text-red-400">{error}</p>
-        <button onClick={fetchCommissions} className="mt-4 px-4 py-2 bg-red-500 text-white rounded-lg">Réessayer</button>
+      <div className="min-h-[400px] flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+            className="w-16 h-16 mx-auto mb-4"
+          >
+            <div className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-800 border-t-blue-500 dark:border-t-blue-400" />
+          </motion.div>
+          <p className="text-gray-500 dark:text-gray-400">Loading commissions...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Mes Commissions</h1>
-        <p className="text-gray-500 dark:text-gray-400 text-sm mt-1">Suivez vos gains et paiements</p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 p-6">
+      <AnimatePresence>
+        {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
+      </AnimatePresence>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl p-4 text-white">
-          <p className="text-white/80 text-sm">Total gagné</p>
-          <p className="text-2xl font-bold mt-1">{formatPrice(stats.totalEarned, "MAD")}</p>
-          <p className="text-white/60 text-xs mt-1">{stats.paid} commissions payées</p>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
-            <Clock size={16} className="text-yellow-500" />
-            <span className="text-sm">En attente</span>
+      <div className="max-w-7xl mx-auto space-y-6">
+        {/* Header Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+              Commissions
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+              Manage and track all your commission earnings
+            </p>
           </div>
-          <p className="text-xl font-bold text-gray-800 dark:text-white">{stats.pending}</p>
-          <p className="text-xs text-gray-400 mt-1">{formatPrice(stats.pendingAmount, "MAD")} en attente</p>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
-            <CheckCircle size={16} className="text-green-500" />
-            <span className="text-sm">Payées</span>
-          </div>
-          <p className="text-xl font-bold text-gray-800 dark:text-white">{stats.paid}</p>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
-            <XCircle size={16} className="text-red-500" />
-            <span className="text-sm">Échouées</span>
-          </div>
-          <p className="text-xl font-bold text-gray-800 dark:text-white">{stats.failed}</p>
-        </div>
-        
-        <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
-          <div className="flex items-center gap-2 text-gray-500 dark:text-gray-400 mb-2">
-            <FileText size={16} className="text-purple-500" />
-            <span className="text-sm">Total commissions</span>
-          </div>
-          <p className="text-xl font-bold text-gray-800 dark:text-white">{stats.total}</p>
-        </div>
-      </div>
+          <motion.button
+            whileHover={{ scale: 1.02 }}
+            whileTap={{ scale: 0.98 }}
+            onClick={() => fetchData({ silent: true })}
+            disabled={refreshing}
+            className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white font-medium shadow-md hover:shadow-lg transition-all disabled:opacity-50"
+          >
+            <RefreshCw size={16} className={refreshing ? "animate-spin" : ""} />
+            Refresh
+          </motion.button>
+        </motion.div>
 
-      {/* Filters */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="flex-1 relative">
-          <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-          <input
-            type="text"
-            placeholder="Rechercher par commande ou offre..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        {/* Stats Grid */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        >
+          <StatCard 
+            label="Total Commissions" 
+            value={formatMoney(stats.totalAmount)} 
+            sub={`${stats.count} total`}
+            icon={Wallet2}
           />
-        </div>
-        
-        <select
-          value={statusFilter}
-          onChange={(e) => setStatusFilter(e.target.value)}
-          className="px-3 py-2 text-sm border border-gray-300 dark:border-gray-700 rounded-lg bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          <StatCard 
+            label="Available" 
+            value={formatMoney(stats.paidAmount)} 
+            sub={`${stats.paidCount} paid`}
+            icon={CheckCircle2}
+            trend="up"
+            trendValue="+12%"
+          />
+          <StatCard 
+            label="Pending" 
+            value={formatMoney(stats.pendingAmount)} 
+            sub={`${stats.pendingCount} awaiting`}
+            icon={Clock3}
+            trend="down"
+            trendValue="-3%"
+          />
+          <StatCard 
+            label="Failed" 
+            value={`${stats.failedCount}`} 
+            sub="Payment failed"
+            icon={XCircle}
+          />
+        </motion.div>
+
+        {/* Filters Section */}
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 p-4 shadow-sm"
         >
-          <option value="all">Tous les statuts</option>
-          <option value="pending_payment">En attente</option>
-          <option value="processing_payment">En traitement</option>
-          <option value="paid">Payé</option>
-          <option value="payment_failed">Échoué</option>
-        </select>
-        
-        <button
-          onClick={fetchCommissions}
-          className="p-2 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
-        >
-          <RefreshCw size={16} className={loading ? "animate-spin" : ""} />
-        </button>
-      </div>
-
-      {/* Commissions Table */}
-      {filteredCommissions.length === 0 ? (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 p-12 text-center">
-          <TrendingUp size={48} className="mx-auto text-gray-400 mb-4" />
-          <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-2">Aucune commission trouvée</h3>
-          <p className="text-gray-500 dark:text-gray-400">Les commissions apparaîtront ici après vos collaborations</p>
-        </div>
-      ) : (
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-800 overflow-hidden">
-          <div className="overflow-x-auto">
-            <table className="w-full min-w-[800px]">
-              <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Commande</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Offre</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Montant total</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Votre commission</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500">Statut</th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 hidden md:table-cell">Date</th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500">Actions</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
-                {paginatedCommissions.map((commission) => (
-                  <tr key={commission.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition">
-                    <td className="px-4 py-3">
-                      <code className="text-xs font-mono">{commission.order_id?.slice(0, 8)}...</code>
-                    </td>
-                    <td className="px-4 py-3">
-                      <p className="text-sm font-medium text-gray-800 dark:text-white truncate max-w-[150px]">
-                        {commission.collaboration?.offer?.titre || "—"}
-                      </p>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-semibold">{formatPrice(commission.commission_total, commission.currency)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <span className="text-sm font-semibold text-green-600">{formatPrice(commission.commission_provider, commission.currency)}</span>
-                    </td>
-                    <td className="px-4 py-3">
-                      {renderStatusBadge(commission.status)}
-                    </td>
-                    <td className="px-4 py-3 hidden md:table-cell">
-                      <p className="text-xs text-gray-500">{formatDate(commission.created_at)}</p>
-                    </td>
-                    <td className="px-4 py-3 text-right">
-                      <button
-                        onClick={() => openDetails(commission)}
-                        className="p-1.5 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
-                        title="Voir les détails"
-                      >
-                        <Eye size={16} />
-                      </button>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Pagination */}
-          {totalPages > 1 && (
-            <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-wrap gap-3">
-              <p className="text-xs text-gray-500">
-                {((currentPage - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredCommissions.length)} sur {filteredCommissions.length}
-              </p>
-              <div className="flex gap-1">
-                <button
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                  disabled={currentPage === 1}
-                  className="p-1.5 rounded-lg border disabled:opacity-50"
-                >
-                  <ChevronLeft size={14} />
-                </button>
-                <span className="px-3 py-1 rounded-lg bg-blue-500 text-white text-sm">{currentPage}</span>
-                <button
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                  disabled={currentPage === totalPages}
-                  className="p-1.5 rounded-lg border disabled:opacity-50"
-                >
-                  <ChevronRight size={14} />
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
-      )}
-
-      {/* Commission Details Modal */}
-      {showDetailsModal && selectedCommission && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[85vh] overflow-hidden shadow-xl">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center">
-                  <Wallet size={20} className="text-blue-600" />
-                </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Détails de la commission</h3>
-                  <p className="text-xs text-gray-500">Commande: {selectedCommission.order_id?.slice(0, 8)}...</p>
-                </div>
-              </div>
-              <button onClick={() => setShowDetailsModal(false)} className="p-1 rounded-lg hover:bg-gray-100">✕</button>
-            </div>
-            
-            <div className="p-5 overflow-y-auto max-h-[60vh] space-y-4">
-              {/* Offer Info */}
-              <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                <p className="text-xs text-gray-500 mb-1">Offre</p>
-                <p className="font-medium">{selectedCommission.collaboration?.offer?.titre || "—"}</p>
-              </div>
-              
-              {/* Amounts */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Montant total</p>
-                  <p className="text-lg font-bold">{formatPrice(selectedCommission.commission_total, selectedCommission.currency)}</p>
-                </div>
-                <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg">
-                  <p className="text-xs text-green-600 dark:text-green-400 mb-1">Votre commission</p>
-                  <p className="text-lg font-bold text-green-600">{formatPrice(selectedCommission.commission_provider, selectedCommission.currency)}</p>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Frais SaaS</p>
-                  <p className="text-md">{formatPrice(selectedCommission.commission_saas, selectedCommission.currency)}</p>
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Montant final store</p>
-                  <p className="text-md">{formatPrice(selectedCommission.commission_final_store, selectedCommission.currency)}</p>
-                </div>
-              </div>
-              
-              {/* Status & Dates */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Statut</p>
-                  {renderStatusBadge(selectedCommission.status)}
-                </div>
-                <div className="p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
-                  <p className="text-xs text-gray-500 mb-1">Date de création</p>
-                  <p className="text-sm">{formatDate(selectedCommission.created_at)}</p>
-                </div>
-                {selectedCommission.paid_at && (
-                  <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg col-span-2">
-                    <p className="text-xs text-green-600 dark:text-green-400 mb-1">Date de paiement</p>
-                    <p className="text-sm">{formatDate(selectedCommission.paid_at)}</p>
-                  </div>
-                )}
-              </div>
-              
-              {/* Payment Attempts */}
-              <div>
-                <div className="flex items-center justify-between mb-3">
-                  <p className="text-sm font-medium text-gray-700 dark:text-gray-300">Tentatives de paiement</p>
-                  <button
-                    onClick={() => setShowAttemptsModal(true)}
-                    className="text-xs text-blue-500 hover:text-blue-600"
-                  >
-                    Voir tout ({paymentAttempts.length})
-                  </button>
-                </div>
-                <div className="space-y-2">
-                  {paymentAttempts.slice(0, 3).map((attempt, idx) => (
-                    <div key={attempt.id} className={`p-2 rounded-lg ${attempt.status === "success" ? 'bg-green-50 dark:bg-green-900/20' : 'bg-red-50 dark:bg-red-900/20'}`}>
-                      <div className="flex justify-between items-center">
-                        <div className="flex items-center gap-2">
-                          {attempt.status === "success" ? (
-                            <CheckCircle size={12} className="text-green-600" />
-                          ) : (
-                            <XCircle size={12} className="text-red-600" />
-                          )}
-                          <span className="text-xs font-medium">
-                            Tentative #{idx + 1}
-                          </span>
-                        </div>
-                        <span className="text-xs text-gray-500">{formatDate(attempt.attempted_at)}</span>
-                      </div>
-                      {attempt.error_message && (
-                        <p className="text-xs text-red-600 mt-1">{attempt.error_message}</p>
-                      )}
-                      <div className="flex justify-between text-xs text-gray-500 mt-1">
-                        <span>Requis: {formatPrice(attempt.required_amount)}</span>
-                        {attempt.available_balance && (
-                          <span>Disponible: {formatPrice(attempt.available_balance)}</span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                  {paymentAttempts.length === 0 && (
-                    <p className="text-xs text-gray-400 text-center py-2">Aucune tentative enregistrée</p>
-                  )}
-                </div>
-              </div>
-            </div>
-            
-            <div className="p-5 border-t border-gray-200 dark:border-gray-800 flex justify-end gap-3">
-              <button
-                onClick={() => {
-                  setShowDetailsModal(false);
-                  setShowAttemptsModal(true);
+          <div className="flex flex-col md:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <input
+                value={searchTerm}
+                onChange={(event) => {
+                  setSearchTerm(event.target.value);
+                  setPage(1);
                 }}
-                className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition"
+                placeholder="Search by order ID, offer title or provider..."
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all"
+              />
+            </div>
+
+            <div className="relative min-w-[200px]">
+              <Filter size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+              <select
+                value={statusFilter}
+                onChange={(event) => {
+                  setStatusFilter(event.target.value);
+                  setPage(1);
+                }}
+                className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none cursor-pointer"
               >
-                Voir toutes les tentatives
-              </button>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
-              >
-                Fermer
-              </button>
+                <option value="all">All statuses</option>
+                <option value="pending_payment">Pending payment</option>
+                <option value="processing_payment">Processing</option>
+                <option value="paid">Paid</option>
+                <option value="payment_failed">Payment failed</option>
+                <option value="cancelled">Cancelled</option>
+              </select>
+              <ChevronDown size={16} className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-400" />
             </div>
           </div>
-        </div>
-      )}
+        </motion.div>
+
+        {/* Error Alert */}
+        <AnimatePresence>
+          {error && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="rounded-2xl border border-rose-200 dark:border-rose-800 bg-rose-50 dark:bg-rose-900/20 p-4"
+            >
+              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400">
+                <AlertCircle size={18} />
+                <span className="text-sm">{error}</span>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Commissions List - Simple Table */}
+        {filteredCommissions.length === 0 ? (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 p-12 text-center shadow-sm"
+          >
+            <div className="flex flex-col items-center gap-3">
+              <div className="p-3 rounded-full bg-gray-100 dark:bg-gray-800">
+                <Wallet2 size={32} className="text-gray-400" />
+              </div>
+              <p className="text-gray-500 dark:text-gray-400">No commissions found for this filter.</p>
+            </div>
+          </motion.div>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden shadow-sm"
+          >
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[1000px]">
+                <thead className="bg-gray-50 dark:bg-gray-800/50 border-b border-gray-200 dark:border-gray-800">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Order</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Offer</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Amount</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Commission</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider hidden lg:table-cell">Date</th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                  <AnimatePresence>
+                    {paginatedCommissions.map((commission, idx) => (
+                      <motion.tr 
+                        key={commission.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.02 }}
+                        className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all group"
+                      >
+                        <td className="px-4 py-3">
+                          <span className="text-xs text-gray-600 dark:text-gray-400">
+                            {commission.order_reference || (commission.order_id ? "Linked order" : "—")}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <p className="text-sm font-medium text-gray-800 dark:text-white truncate max-w-[200px]">
+                            {commission.collaboration?.offer?.titre || "—"}
+                          </p>
+                        </td>
+                        <td className="px-4 py-3">
+                          <div className="flex items-center gap-1.5">
+                            {commission.provider_type === "AGENCY_OWNER" ? (
+                              <Building2 size={12} className="text-purple-500" />
+                            ) : (
+                              <User size={12} className="text-blue-500" />
+                            )}
+                            <span className="text-xs text-gray-600 dark:text-gray-400">
+                              {commission.provider_type === "AGENCY_OWNER" ? "Agency Owner" : "Agency Agent"}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-semibold text-gray-900 dark:text-white">
+                            {formatMoney(commission.commission_total, commission.currency)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <span className="text-sm font-bold text-emerald-600 dark:text-emerald-400">
+                            {formatMoney(commission.commission_provider, commission.currency)}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3">
+                          <StatusChip status={commission.status} />
+                        </td>
+                        <td className="px-4 py-3 hidden lg:table-cell">
+                          <p className="text-xs text-gray-500">{formatDateTime(commission.created_at)}</p>
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => openCommissionDetails(commission)}
+                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+                            title="View details"
+                          >
+                            <Eye size={16} />
+                          </motion.button>
+                        </td>
+                      </motion.tr>
+                    ))}
+                  </AnimatePresence>
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="px-4 py-3 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between flex-wrap gap-3 bg-gray-50 dark:bg-gray-800/30">
+                <p className="text-xs text-gray-500">
+                  {((page - 1) * ITEMS_PER_PAGE) + 1} - {Math.min(page * ITEMS_PER_PAGE, filteredCommissions.length)} of {filteredCommissions.length}
+                </p>
+                <div className="flex gap-1">
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setPage(p => Math.max(1, p - 1))}
+                    disabled={page === 1}
+                    className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronLeft size={14} />
+                  </motion.button>
+                  <span className="px-3 py-1 rounded-lg bg-gradient-to-r from-blue-500 to-indigo-600 text-white text-sm font-medium">
+                    {page}
+                  </span>
+                  <motion.button
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={() => setPage(p => Math.min(totalPages, p + 1))}
+                    disabled={page === totalPages}
+                    className="p-1.5 rounded-lg border border-gray-200 dark:border-gray-700 hover:bg-gray-100 dark:hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  >
+                    <ChevronRight size={14} />
+                  </motion.button>
+                </div>
+              </div>
+            )}
+          </motion.div>
+        )}
+      </div>
 
       {/* Payment Attempts Modal */}
-      {showAttemptsModal && selectedCommission && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[80vh] overflow-hidden shadow-xl">
-            <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-purple-100 dark:bg-purple-900/30 rounded-full flex items-center justify-center">
-                  <Clock size={20} className="text-purple-600" />
+      <AnimatePresence>
+        {openModal && activeCommission && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setOpenModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="max-h-[85vh] w-full max-w-2xl overflow-hidden rounded-2xl bg-white dark:bg-gray-900 shadow-2xl"
+            >
+              <div className="relative">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 to-blue-500" />
+                <div className="flex items-center justify-between p-5 border-b border-gray-200 dark:border-gray-800">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-gradient-to-br from-cyan-500/10 to-blue-500/10">
+                      <Wallet2 size={18} className="text-cyan-600 dark:text-cyan-400" />
+                    </div>
+                    <div>
+                      <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Commission Details</h4>
+                      <p className="text-xs text-gray-500 dark:text-gray-400">
+                        {activeCommission.order_reference || (activeCommission.order_id ? "Linked order" : "No linked order")}
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => setOpenModal(false)}
+                    className="p-1 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+                  >
+                    <XCircle size={18} className="text-gray-500" />
+                  </button>
                 </div>
-                <div>
-                  <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Historique des paiements</h3>
-                  <p className="text-xs text-gray-500">Commission: {selectedCommission.order_id?.slice(0, 8)}...</p>
+
+                <div className="max-h-[65vh] overflow-y-auto p-5 space-y-4">
+                  {/* Offer Info */}
+                  <div className="rounded-xl bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-500/10 dark:to-indigo-500/10 p-4 border border-blue-100 dark:border-blue-500/20">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Offer</p>
+                    <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                      {activeCommission?.collaboration?.offer?.titre || "-"}
+                    </p>
+                  </div>
+
+                  {/* Amounts Grid */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Total Amount</p>
+                      <p className="mt-1 font-bold text-gray-900 dark:text-white text-lg">
+                        {formatMoney(activeCommission.commission_total, activeCommission.currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-emerald-50 dark:bg-emerald-500/10 p-3">
+                      <p className="text-xs text-emerald-600 dark:text-emerald-400">Provider Commission</p>
+                      <p className="mt-1 font-bold text-emerald-700 dark:text-emerald-400 text-lg">
+                        {formatMoney(activeCommission.commission_provider, activeCommission.currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">SaaS Fee</p>
+                      <p className="mt-1 font-semibold text-gray-900 dark:text-white">
+                        {formatMoney(activeCommission.commission_saas, activeCommission.currency)}
+                      </p>
+                    </div>
+                    <div className="rounded-xl bg-gray-50 dark:bg-gray-800/50 p-3">
+                      <p className="text-xs text-gray-500 dark:text-gray-400">Created At</p>
+                      <p className="mt-1 text-sm font-semibold text-gray-900 dark:text-white">
+                        {formatDateTime(activeCommission.created_at)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Payment Attempts */}
+                  <div>
+                    <p className="mb-3 text-sm font-semibold text-gray-800 dark:text-white flex items-center gap-2">
+                      <Zap size={14} className="text-yellow-500" />
+                      Payment Attempts
+                    </p>
+                    {attemptsLoading ? (
+                      <div className="flex justify-center py-8">
+                        <Loader2 size={24} className="animate-spin text-blue-500" />
+                      </div>
+                    ) : attempts.length === 0 ? (
+                      <div className="rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 p-4 text-center">
+                        <p className="text-xs text-gray-500 dark:text-gray-400">No payment attempts yet.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        {attempts.map((attempt, idx) => (
+                          <motion.div
+                            key={attempt.id}
+                            initial={{ opacity: 0, x: -20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: idx * 0.05 }}
+                            className={`rounded-xl border p-3 hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-all ${
+                              attempt.status === "success" 
+                                ? "border-emerald-200 dark:border-emerald-800 bg-emerald-50/50 dark:bg-emerald-500/5" 
+                                : "border-rose-200 dark:border-rose-800 bg-rose-50/50 dark:bg-rose-500/5"
+                            }`}
+                          >
+                            <div className="flex flex-wrap items-center justify-between gap-2">
+                              <div className="flex items-center gap-3">
+                                <div className={`p-1.5 rounded-lg ${
+                                  attempt.status === "success" 
+                                    ? "bg-emerald-100 dark:bg-emerald-500/20" 
+                                    : "bg-rose-100 dark:bg-rose-500/20"
+                                }`}>
+                                  {attempt.status === "success" ? (
+                                    <CheckCircle2 size={14} className="text-emerald-600 dark:text-emerald-400" />
+                                  ) : (
+                                    <XCircle size={14} className="text-rose-600 dark:text-rose-400" />
+                                  )}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-semibold text-gray-900 dark:text-white">
+                                    Attempt #{idx + 1}
+                                  </p>
+                                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                                    {formatDateTime(attempt.attempted_at)}
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-bold text-gray-900 dark:text-white">
+                                  {formatMoney(attempt.required_amount, activeCommission.currency)}
+                                </p>
+                                {attempt.error_message && (
+                                  <p className="text-xs text-rose-600 dark:text-rose-400 mt-1 max-w-[200px] truncate">
+                                    {attempt.error_message}
+                                  </p>
+                                )}
+                              </div>
+                            </div>
+                          </motion.div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
-              <button onClick={() => setShowAttemptsModal(false)} className="p-1 rounded-lg hover:bg-gray-100">✕</button>
-            </div>
-            
-            <div className="p-5 overflow-y-auto max-h-[60vh]">
-              {loadingAttempts ? (
-                <div className="flex justify-center py-8"><Loader2 size={24} className="animate-spin text-blue-500" /></div>
-              ) : paymentAttempts.length === 0 ? (
-                <div className="text-center py-8 text-gray-500">
-                  <Info size={32} className="mx-auto mb-2 text-gray-300" />
-                  <p>Aucune tentative de paiement enregistrée</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {paymentAttempts.map((attempt, idx) => (
-                    <div key={attempt.id} className={`p-3 rounded-lg border ${attempt.status === "success" ? 'border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/20' : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20'}`}>
-                      <div className="flex justify-between items-start mb-2">
-                        <div className="flex items-center gap-2">
-                          {attempt.status === "success" ? (
-                            <CheckCircle size={16} className="text-green-600" />
-                          ) : (
-                            <XCircle size={16} className="text-red-600" />
-                          )}
-                          <span className="font-medium">Tentative #{idx + 1}</span>
-                          <span className={`text-xs px-2 py-0.5 rounded-full ${attempt.status === "success" ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}`}>
-                            {attempt.status === "success" ? "Succès" : "Échec"}
-                          </span>
-                        </div>
-                        <span className="text-xs text-gray-500">{formatDate(attempt.attempted_at)}</span>
-                      </div>
-                      
-                      {attempt.error_code && (
-                        <div className="mb-2">
-                          <span className="text-xs font-medium text-red-600">Erreur: {attempt.error_code}</span>
-                          {attempt.error_message && (
-                            <p className="text-xs text-red-600 mt-1">{attempt.error_message}</p>
-                          )}
-                        </div>
-                      )}
-                      
-                      <div className="grid grid-cols-2 gap-2 text-xs text-gray-600 mt-2 pt-2 border-t border-gray-200 dark:border-gray-700">
-                        <div>
-                          <span className="text-gray-500">Montant requis:</span>
-                          <p className="font-medium">{formatPrice(attempt.required_amount)}</p>
-                        </div>
-                        {attempt.available_balance && (
-                          <div>
-                            <span className="text-gray-500">Solde disponible:</span>
-                            <p className="font-medium">{formatPrice(attempt.available_balance)}</p>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="p-5 border-t border-gray-200 dark:border-gray-800 flex justify-end">
-              <button
-                onClick={() => setShowAttemptsModal(false)}
-                className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition"
-              >
-                Fermer
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

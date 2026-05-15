@@ -1,9 +1,8 @@
-// src/context/LanguageContext.jsx
-import { createContext, useEffect, useState, useContext } from "react";
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { updateLanguage } from "../api/auth";
 import { AuthContext } from "./AuthContext";
+import { useToast } from "./ToastContext";
 
-// Translations
 import fr from "../translations/fr";
 import en from "../translations/en";
 import ar from "../translations/ar";
@@ -11,44 +10,37 @@ import ar from "../translations/ar";
 export const LanguageContext = createContext();
 
 const dictionaries = { fr, en, ar };
+const supportedLanguages = ["en"];
+
+const normalizeLanguage = (language) =>
+  supportedLanguages.includes(language) ? language : "en";
 
 export const LanguageProvider = ({ children }) => {
   const { user } = useContext(AuthContext);
-  const [lang, setLang] = useState("fr");
+  const toast = useToast();
+  const [lang, setLang] = useState(() =>
+    normalizeLanguage(localStorage.getItem("teqa-lang") || localStorage.getItem("lang") || "en")
+  );
 
-  // -------------------------------------------------------
-  // 🔵 Appliquer la langue
-  // -------------------------------------------------------
-  const applyLang = (lng) => {
-    setLang(lng);
-    localStorage.setItem("lang", lng);
+  const applyLang = useCallback((lng) => {
+    const nextLang = normalizeLanguage(lng);
+    setLang(nextLang);
+    localStorage.setItem("teqa-lang", nextLang);
+    localStorage.removeItem("lang");
+    document.documentElement.lang = nextLang;
+    document.documentElement.dir = nextLang === "ar" ? "rtl" : "ltr";
+  }, []);
 
-    document.documentElement.dir = lng === "ar" ? "rtl" : "ltr";
-    document.documentElement.lang = lng;
-  };
-
-  // -------------------------------------------------------
-  // 🔵 Initialisation automatique
-  // -------------------------------------------------------
   useEffect(() => {
     if (user?.language) {
       applyLang(user.language);
       return;
     }
 
-    const saved = localStorage.getItem("lang");
-    if (saved) {
-      applyLang(saved);
-      return;
-    }
+    applyLang(lang);
+  }, [applyLang, lang, user?.language]);
 
-    applyLang("fr");
-  }, [user]);
-
-  // -------------------------------------------------------
-  // 🔵 Fonction de traduction
-  // -------------------------------------------------------
-  const t = (key, fallback = "") => {
+  const t = useCallback((key, fallback = "") => {
     try {
       const value = key
         .split(".")
@@ -58,32 +50,44 @@ export const LanguageProvider = ({ children }) => {
     } catch {
       return fallback || key;
     }
-  };
+  }, [lang]);
 
-  // -------------------------------------------------------
-  // 🔵 Changement manuel + sync backend
-  // -------------------------------------------------------
-  const changeLanguage = async (newLang) => {
-    applyLang(newLang);
-
-    if (user) {
-      try {
-        await updateLanguage({ language: newLang });
-      } catch (err) {
-        console.error("Language sync failed:", err);
-      }
+  const changeLanguage = useCallback(async (newLang) => {
+    const previousLang = lang;
+    const nextLang = normalizeLanguage(newLang);
+    if (newLang !== nextLang) {
+      toast.info("Only English is available right now. Other languages are disabled.", "Language unavailable");
+      return;
     }
-  };
+    applyLang(nextLang);
+
+    if (!user) return;
+
+    try {
+      await updateLanguage({ language: nextLang });
+      toast.success("La langue a ete mise a jour.", "Preference enregistree");
+    } catch (err) {
+      applyLang(previousLang);
+      toast.error("Impossible de changer la langue.", "Synchronisation echouee");
+    }
+  }, [applyLang, lang, toast, user]);
+
+  const value = useMemo(
+    () => ({
+      lang,
+      locale: lang,
+      dir: lang === "ar" ? "rtl" : "ltr",
+      isRTL: lang === "ar",
+      t,
+      setLocale: changeLanguage,
+      changeLanguage,
+      supportedLanguages,
+    }),
+    [lang, t, changeLanguage]
+  );
 
   return (
-    <LanguageContext.Provider
-      value={{
-        lang,
-        isRTL: lang === "ar",
-        t,
-        changeLanguage,
-      }}
-    >
+    <LanguageContext.Provider value={value}>
       {children}
     </LanguageContext.Provider>
   );

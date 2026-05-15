@@ -1,6 +1,6 @@
 import { useContext } from "react";
-import { Navigate } from "react-router-dom";
 import { AuthContext } from "../context/AuthContext";
+import { LOGIN_REDIRECT_URL } from "../api/authConfig";
 import Loading from "../ui/Loading";
 
 const PrivateRoute = ({ children }) => {
@@ -8,7 +8,10 @@ const PrivateRoute = ({ children }) => {
 
   if (loading) return <Loading />;
 
-  if (!user) return window.location.href = "https://teqaconnect.com/login";
+  if (!user) {
+    window.location.href = LOGIN_REDIRECT_URL;
+    return null;
+  }
 
   return children;
 };

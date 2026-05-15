@@ -1,5 +1,5 @@
 // ListOffers.jsx - Version améliorée
-import { useState, useEffect, useRef } from "react";
+import { useContext, useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { 
   Package, 
@@ -26,7 +26,17 @@ import {
   User,
   Building2
 } from "lucide-react";
-import { GetOffers, DeleteOffer, UpdateOfferStatus } from "../../api/auth";
+import { AuthContext } from "../../context/AuthContext";
+import { useToast } from "../../context/ToastContext";
+import { isProviderRole } from "../../config/permissions";
+import {
+  DeleteOffer,
+  GetMarketplaceOffers,
+  GetMyOffers,
+  GetOfferStats,
+  GetOffers,
+  UpdateOfferStatus,
+} from "../../api/auth";
 
 /* =========================================================
    CONSTANTS
@@ -81,7 +91,10 @@ const truncateText = (text, maxLength = 80) => {
 ========================================================= */
 
 const ListOffers = () => {
+  const { hasAnyPermission, hasPermission, user } = useContext(AuthContext);
+  const toast = useToast();
   const [offers, setOffers] = useState([]);
+  const [serverStats, setServerStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -96,7 +109,11 @@ const ListOffers = () => {
   const [newStatus, setNewStatus] = useState("");
   const [actionLoading, setActionLoading] = useState(false);
   const [hoveredTitle, setHoveredTitle] = useState(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const canCreateOffer = hasPermission("offers.create");
+  const canUpdateOffer = hasAnyPermission(["offers.update", "offers.update_own", "offers.update_agency"]);
+  const canDeleteOffer = hasAnyPermission(["offers.delete", "offers.delete_own", "offers.delete_agency"]);
+  const canChangeStatus = hasAnyPermission(["offers.change_status", "offers.update", "offers.update_own", "offers.update_agency"]);
+  const providerWorkspace = isProviderRole(user?.role);
 
   /* =========================================================
      FETCH OFFERS
@@ -106,7 +123,16 @@ const ListOffers = () => {
     setError(null);
     
     try {
-      const response = await GetOffers();
+      const params = {};
+      if (searchTerm.trim()) params.search = searchTerm.trim();
+      if (statusFilter !== "all") params.status = statusFilter;
+
+      const response = providerWorkspace
+        ? await GetMyOffers(params)
+        : hasPermission("offers.view_marketplace")
+          ? await GetMarketplaceOffers(params)
+          : await GetOffers(params);
+      const statsPromise = GetOfferStats().catch(() => ({ data: null }));
       let offersData = [];
       
       if (response.data) {
@@ -127,9 +153,15 @@ const ListOffers = () => {
       }
       
       setOffers(offersData);
+      const statsResponse = await statsPromise;
+      if (statsResponse.data?.success) {
+        setServerStats(statsResponse.data);
+      }
     } catch (err) {
-      console.error("Error fetching offers:", err);
-      setError(err.response?.data?.message || err.message || "Failed to load offers");
+      if (process.env.NODE_ENV !== "production") console.warn("Error fetching offers:", err);
+      const message = err.response?.data?.message || err.message || "Failed to load offers";
+      setError(message);
+      toast.error(message, "Offers unavailable");
     } finally {
       setLoading(false);
     }
@@ -198,11 +230,14 @@ const ListOffers = () => {
     try {
       await DeleteOffer(selectedOffer.id);
       await fetchOffers();
+      toast.success("Offer deleted successfully.", "Offer removed");
       setShowDeleteModal(false);
       setSelectedOffer(null);
     } catch (err) {
-      console.error("Error deleting offer:", err);
-      setError(err.response?.data?.message || err.message || "Failed to delete offer");
+      if (process.env.NODE_ENV !== "production") console.warn("Error deleting offer:", err);
+      const message = err.response?.data?.message || err.message || "Failed to delete offer";
+      setError(message);
+      toast.error(message, "Delete failed");
     } finally {
       setActionLoading(false);
     }
@@ -215,21 +250,22 @@ const ListOffers = () => {
     try {
       await UpdateOfferStatus(selectedOffer.id, newStatus);
       await fetchOffers();
+      toast.success(`Offer status changed to ${newStatus}.`, "Status updated");
       setShowStatusModal(false);
       setSelectedOffer(null);
       setNewStatus("");
     } catch (err) {
-      console.error("Error updating status:", err);
-      setError(err.response?.data?.message || err.message || "Failed to update status");
+      if (process.env.NODE_ENV !== "production") console.warn("Error updating status:", err);
+      const message = err.response?.data?.message || err.message || "Failed to update status";
+      setError(message);
+      toast.error(message, "Status update failed");
     } finally {
       setActionLoading(false);
     }
   };
 
-  const handleTitleMouseEnter = (e, title) => {
+  const handleTitleMouseEnter = (title) => {
     if (title && title.length > 40) {
-      const rect = e.target.getBoundingClientRect();
-      setTooltipPosition({ x: rect.left, y: rect.top - 35 });
       setHoveredTitle(title);
     }
   };
@@ -331,32 +367,35 @@ const ListOffers = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="page-shell px-1 py-2">
+      <div>
         {/* Header */}
-        <div className="mb-8">
+        <div className="page-header-card mb-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
             <div>
-              <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+              <p className="eyebrow">Catalog and pricing</p>
+              <h1 className="mt-4 text-3xl font-bold text-primary">
                 My Offers
               </h1>
-              <p className="text-gray-500 dark:text-gray-400 mt-2">
+              <p className="mt-2 text-slate-600 dark:text-slate-400">
                 Manage and track all your marketplace offers
               </p>
             </div>
-            <Link
-              to="/create-offer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white rounded-lg font-medium transition-all shadow-lg hover:shadow-xl transform hover:scale-[1.02]"
-            >
-              <Plus size={18} />
-              Create Offer
-            </Link>
+            {canCreateOffer ? (
+              <Link
+                to="/create-offer"
+                className="btn-primary"
+              >
+                <Plus size={18} />
+                Create Offer
+              </Link>
+            ) : null}
           </div>
         </div>
 
         {/* Error Alert */}
         {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl animate-slide-down">
+          <div className="mb-6 rounded-[1.5rem] border border-red-200 bg-red-50 p-4 animate-slide-down">
             <div className="flex items-center gap-3">
               <AlertCircle className="text-red-600 dark:text-red-400" size={20} />
               <div>
@@ -374,7 +413,7 @@ const ListOffers = () => {
         )}
 
         {/* Filters Bar */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-6">
+        <div className="toolbar-card mb-6">
           <div className="flex flex-col sm:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={18} />
@@ -383,7 +422,7 @@ const ListOffers = () => {
                 placeholder="Search offers by title or description..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="field-input py-2 pl-10 pr-4"
               />
             </div>
             
@@ -392,7 +431,7 @@ const ListOffers = () => {
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="field-select px-4 py-2"
               >
                 <option value="all">All Status</option>
                 <option value="active">Active</option>
@@ -403,7 +442,7 @@ const ListOffers = () => {
             
             <button
               onClick={fetchOffers}
-              className="inline-flex items-center justify-center p-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+              className="btn-secondary px-3 py-2"
             >
               <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
             </button>
@@ -412,26 +451,26 @@ const ListOffers = () => {
 
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+          <div className="metric-card">
             <p className="text-sm text-gray-500 dark:text-gray-400">Total Offers</p>
-            <p className="text-2xl font-bold text-gray-800 dark:text-white">{offers.length}</p>
+            <p className="text-2xl font-bold text-gray-800 dark:text-white">{serverStats?.total_offers ?? offers.length}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+          <div className="metric-card">
             <p className="text-sm text-gray-500 dark:text-gray-400">Active</p>
             <p className="text-2xl font-bold text-green-600 dark:text-green-400">
-              {offers.filter(o => o.status === "active").length}
+              {serverStats?.by_status?.active ?? offers.filter(o => o.status === "active").length}
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+          <div className="metric-card">
             <p className="text-sm text-gray-500 dark:text-gray-400">Inactive</p>
             <p className="text-2xl font-bold text-gray-600 dark:text-gray-400">
-              {offers.filter(o => o.status === "inactive").length}
+              {serverStats?.by_status?.inactive ?? offers.filter(o => o.status === "inactive").length}
             </p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-4 border border-gray-200 dark:border-gray-800">
+          <div className="metric-card">
             <p className="text-sm text-gray-500 dark:text-gray-400">Archived</p>
             <p className="text-2xl font-bold text-yellow-600 dark:text-yellow-400">
-              {offers.filter(o => o.status === "archived").length}
+              {serverStats?.by_status?.archived ?? offers.filter(o => o.status === "archived").length}
             </p>
           </div>
         </div>
@@ -454,7 +493,7 @@ const ListOffers = () => {
                 ? "Try adjusting your search or filters" 
                 : "Get started by creating your first offer"}
             </p>
-            {(!searchTerm && statusFilter === "all") && (
+            {(!searchTerm && statusFilter === "all" && canCreateOffer) && (
               <Link
                 to="/create-offer"
                 className="inline-flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition"
@@ -517,7 +556,7 @@ const ListOffers = () => {
                           <div className="min-w-0 flex-1">
                             <p 
                               className="font-medium text-gray-800 dark:text-white truncate max-w-[200px] md:max-w-[300px]"
-                              onMouseEnter={(e) => handleTitleMouseEnter(e, offer.titre)}
+                              onMouseEnter={() => handleTitleMouseEnter(offer.titre)}
                               onMouseLeave={handleTitleMouseLeave}
                             >
                               {truncateText(offer.titre, 35)}
@@ -576,33 +615,39 @@ const ListOffers = () => {
                           >
                             <Eye size={16} />
                           </Link>
-                          <Link
-                            to={`/edit-offer/${offer.id}`}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition"
-                            title="Edit offer"
-                          >
-                            <Edit size={16} />
-                          </Link>
-                          <button
-                            onClick={() => {
-                              setSelectedOffer(offer);
-                              setShowStatusModal(true);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition"
-                            title="Change status"
-                          >
-                            <Clock size={16} />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setSelectedOffer(offer);
-                              setShowDeleteModal(true);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
-                            title="Delete offer"
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                          {canUpdateOffer ? (
+                            <Link
+                              to={`/edit-offer/${offer.id}`}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition"
+                              title="Edit offer"
+                            >
+                              <Edit size={16} />
+                            </Link>
+                          ) : null}
+                          {canChangeStatus ? (
+                            <button
+                              onClick={() => {
+                                setSelectedOffer(offer);
+                                setShowStatusModal(true);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition"
+                              title="Change status"
+                            >
+                              <Clock size={16} />
+                            </button>
+                          ) : null}
+                          {canDeleteOffer ? (
+                            <button
+                              onClick={() => {
+                                setSelectedOffer(offer);
+                                setShowDeleteModal(true);
+                              }}
+                              className="p-1.5 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                              title="Delete offer"
+                            >
+                              <Trash2 size={16} />
+                            </button>
+                          ) : null}
                         </div>
                       </td>
                     </tr>
@@ -644,10 +689,7 @@ const ListOffers = () => {
 
       {/* Custom Tooltip for long titles */}
       {hoveredTitle && (
-        <div 
-          className="fixed z-50 px-3 py-2 bg-gray-900 text-white text-sm rounded-lg shadow-xl max-w-md whitespace-normal break-words animate-fade-in"
-          style={{ left: tooltipPosition.x, top: tooltipPosition.y }}
-        >
+        <div className="fixed right-4 top-4 z-50 max-w-md whitespace-normal break-words rounded-lg bg-gray-900 px-3 py-2 text-sm text-white shadow-xl">
           {hoveredTitle}
           <div className="absolute -bottom-1 left-4 w-2 h-2 bg-gray-900 rotate-45"></div>
         </div>
