@@ -14,6 +14,8 @@ export default function ThemeProvider({ children }) {
     setTheme(nextMode);
     localStorage.setItem("teqa-theme", nextMode);
     document.documentElement.classList.toggle("dark", nextMode === "dark");
+    document.documentElement.classList.toggle("light", nextMode === "light");
+    document.documentElement.dataset.theme = nextMode;
   }, []);
 
   useEffect(() => {

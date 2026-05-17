@@ -431,11 +431,11 @@ const AgencyCollaborations = () => {
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-xl flex items-center justify-center">
-                  <Handshake size={20} className="text-blue-600 dark:text-blue-400" />
+                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
+                  <Handshake size={20} className="text-emerald-600 dark:text-emerald-400" />
                 </div>
                 <div>
-                  <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Collaborations</h1>
+                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Collaborations</h1>
                   <p className="text-sm text-gray-500 dark:text-gray-400">Manage collaboration threads with stores</p>
                 </div>
               </div>

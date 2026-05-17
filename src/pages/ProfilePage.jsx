@@ -1,5 +1,6 @@
 import { useContext, useEffect, useMemo, useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { VenusAndMars as VenusMars } from 'lucide-react';
 import {
   User,
   Mail,
@@ -40,7 +41,21 @@ import {
   Flag,
   Image,
   Upload,
-  Trash2
+  Trash2,
+  AtSign,
+  Hash,
+  Cake,
+  IdCard,
+  BookOpen,
+  Heart,
+  Zap,
+  Sparkles,
+  Compass,
+  Coffee,
+  Gift,
+  Rocket,
+  Diamond,
+  Crown
 } from "lucide-react";
 
 import { updateLanguage, updateProfile } from "../api/auth";
@@ -97,41 +112,50 @@ const InfoCard = ({ title, icon: Icon, children, className = "" }) => (
     animate={{ opacity: 1, y: 0 }}
     className={`rounded-2xl border border-gray-200 dark:border-gray-800 bg-white dark:bg-gray-900 shadow-sm overflow-hidden ${className}`}
   >
-    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-800/30">
+    <div className="px-5 py-4 border-b border-gray-100 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
       <div className="flex items-center gap-2">
-        <div className="p-1.5 rounded-lg bg-blue-50 dark:bg-blue-500/10">
-          <Icon size={18} className="text-blue-600 dark:text-blue-400" />
+        <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
+          {/* Noir en dark mode, blanc en light mode */}
+          <Icon size={18} className="text-white dark:text-black" />
         </div>
-        <h2 className="font-semibold text-gray-800 dark:text-white">{title}</h2>
+
+        <h2 className="font-semibold text-gray-800 dark:text-white">
+          {title}
+        </h2>
       </div>
     </div>
+
     <div className="p-5">{children}</div>
   </motion.div>
 );
 
-const FormField = ({ label, name, value, onChange, type = "text", error, required, placeholder }) => (
+const FormField = ({ label, name, value, onChange, type = "text", error, required, placeholder, icon: Icon }) => (
   <div className="space-y-1.5">
-    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+      {Icon && <Icon size={14} className="text-gray-400" />}
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </label>
-    <input
-      type={type}
-      name={name}
-      value={value || ""}
-      onChange={onChange}
-      placeholder={placeholder}
-      className={`w-full px-4 py-2.5 rounded-xl border transition-all duration-200 ${
-        error ? "border-red-400 focus:ring-red-500" : "border-gray-200 dark:border-gray-700 focus:border-blue-400"
-      } bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
-    />
+    <div className="relative">
+      <input
+        type={type}
+        name={name}
+        value={value || ""}
+        onChange={onChange}
+        placeholder={placeholder}
+        className={`w-full px-4 py-2.5 rounded-xl border transition-all duration-200 ${
+          error ? "border-red-400 focus:ring-red-500" : "border-gray-200 dark:border-gray-700 focus:border-blue-400"
+        } bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20`}
+      />
+    </div>
     {error && <p className="text-xs text-red-500 flex items-center gap-1"><AlertCircle size={10} /> {error}</p>}
   </div>
 );
 
-const SelectField = ({ label, name, value, onChange, options, error, required }) => (
+const SelectField = ({ label, name, value, onChange, options, error, required, icon: Icon }) => (
   <div className="space-y-1.5">
-    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+      {Icon && <Icon size={14} className="text-gray-400" />}
       {label}
       {required && <span className="text-red-500 ml-1">*</span>}
     </label>
@@ -151,9 +175,12 @@ const SelectField = ({ label, name, value, onChange, options, error, required })
   </div>
 );
 
-const TextareaField = ({ label, name, value, onChange, rows = 3, placeholder }) => (
+const TextareaField = ({ label, name, value, onChange, rows = 3, placeholder, icon: Icon }) => (
   <div className="space-y-1.5">
-    <label className="text-sm font-medium text-gray-700 dark:text-gray-300">{label}</label>
+    <label className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1.5">
+      {Icon && <Icon size={14} className="text-gray-400" />}
+      {label}
+    </label>
     <textarea
       name={name}
       value={value || ""}
@@ -183,7 +210,8 @@ const StatBadge = ({ label, value, icon: Icon, color }) => {
 };
 
 const PermissionBadge = ({ permission }) => (
-  <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium">
+  <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 text-xs font-medium flex items-center gap-1">
+    <Shield size={10} />
     {permission.split('.').pop()}
   </span>
 );
@@ -278,11 +306,11 @@ const ProfilePage = () => {
         hasLogo: true,
         logoLabel: "Store Logo",
         fields: [
-          { name: "store_name", label: "Store Name", type: "text", required: true, placeholder: "Your store name" },
-          { name: "activity_sector", label: "Activity Sector", type: "text", required: true, placeholder: "e.g., Retail, Services" },
-          { name: "subscription_plan", label: "Subscription Plan", type: "text", placeholder: "Basic, Pro, Enterprise" },
-          { name: "store_address", label: "Store Address", type: "text", placeholder: "Full address" },
-          { name: "website", label: "Website", type: "text", placeholder: "https://..." },
+          { name: "store_name", label: "Store Name", type: "text", required: true, placeholder: "Your store name", icon: Store },
+          { name: "activity_sector", label: "Activity Sector", type: "text", required: true, placeholder: "e.g., Retail, Services", icon: Briefcase },
+          { name: "subscription_plan", label: "Subscription Plan", type: "text", placeholder: "Basic, Pro, Enterprise", icon: CreditCard },
+          { name: "store_address", label: "Store Address", type: "text", placeholder: "Full address", icon: MapPin },
+          { name: "website", label: "Website", type: "text", placeholder: "https://...", icon: Globe },
         ],
       };
     }
@@ -294,9 +322,9 @@ const ProfilePage = () => {
         hasLogo: true,
         logoLabel: "Agency Logo",
         fields: [
-          { name: "agency_name", label: "Agency Name", type: "text", required: true, placeholder: "Your agency name" },
-          { name: "industry", label: "Industry", type: "text", placeholder: "Marketing, Consulting, etc." },
-          { name: "description", label: "Description", type: "textarea", placeholder: "Tell about your agency..." },
+          { name: "agency_name", label: "Agency Name", type: "text", required: true, placeholder: "Your agency name", icon: Building2 },
+          { name: "industry", label: "Industry", type: "text", placeholder: "Marketing, Consulting, etc.", icon: Briefcase },
+          { name: "description", label: "Description", type: "textarea", placeholder: "Tell about your agency...", icon: BookOpen },
         ],
       };
     }
@@ -308,11 +336,11 @@ const ProfilePage = () => {
         hasLogo: true,
         logoLabel: "Profile Photo",
         fields: [
-          { name: "agent_first_name", label: "First Name", type: "text", required: true },
-          { name: "agent_last_name", label: "Last Name", type: "text", required: true },
-          { name: "bio", label: "Bio", type: "textarea", placeholder: "Short description about yourself..." },
-          { name: "skills", label: "Skills", type: "text", placeholder: "e.g., React, Python, Marketing" },
-          { name: "portfolio_url", label: "Portfolio URL", type: "text", placeholder: "https://..." },
+          { name: "agent_first_name", label: "First Name", type: "text", required: true, icon: User },
+          { name: "agent_last_name", label: "Last Name", type: "text", required: true, icon: User },
+          { name: "bio", label: "Bio", type: "textarea", placeholder: "Short description about yourself...", icon: BookOpen },
+          { name: "skills", label: "Skills", type: "text", placeholder: "e.g., React, Python, Marketing", icon: Star },
+          { name: "portfolio_url", label: "Portfolio URL", type: "text", placeholder: "https://...", icon: Globe },
         ],
       };
     }
@@ -494,40 +522,46 @@ const ProfilePage = () => {
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
-            Profile Settings
-          </h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-            {user?.is_child
-              ? "Manage your personal user information. Store and agency settings stay with the parent account."
-              : "Manage your account information and preferences"}
-          </p>
+        <div className="mb-8 flex items-center gap-3">
+          <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
+            <Crown size={24} className="text-white dark:text-black" />
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+              Profile Settings
+            </h1>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1 flex items-center gap-2">
+              <Sparkles size={12} />
+              {user?.is_child
+                ? "Manage your personal user information. Store and agency settings stay with the parent account."
+                : "Manage your account information and preferences"}
+            </p>
+          </div>
         </div>
 
         {/* Section Toggle */}
         <div className="flex gap-2 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
           <button
             onClick={() => setActiveSection("user")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
               activeSection === "user"
                 ? "bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm"
                 : "text-gray-600 dark:text-gray-400 hover:text-gray-800"
             }`}
           >
-            <User size={14} className="inline mr-2" />
+            <User size={14} />
             Personal Info
           </button>
           {roleConfig && (
             <button
               onClick={() => setActiveSection("role")}
-              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all ${
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
                 activeSection === "role"
                   ? "bg-white dark:bg-gray-900 text-blue-600 dark:text-blue-400 shadow-sm"
                   : "text-gray-600 dark:text-gray-400 hover:text-gray-800"
               }`}
             >
-              <Briefcase size={14} className="inline mr-2" />
+              <roleConfig.icon size={14} />
               {roleConfig.title}
             </button>
           )}
@@ -577,13 +611,18 @@ const ProfilePage = () => {
                   </label>
                 </div>
                 <h3 className="font-semibold text-gray-800 dark:text-white">{fullName || "Your Name"}</h3>
-                <p className="text-sm text-gray-500">@{form.username}</p>
+                <p className="text-sm text-gray-500 flex items-center justify-center gap-1">
+                  <AtSign size={12} />
+                  @{form.username}
+                </p>
                 <div className="flex items-center gap-1 mt-2">
-                  <div className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-medium">
+                  <div className="px-2 py-0.5 rounded-full bg-blue-100 dark:bg-blue-500/20 text-blue-700 dark:text-blue-400 text-xs font-medium flex items-center gap-1">
+                    <Shield size={10} />
                     {user?.role?.replace("_", " ")}
                   </div>
                   {user?.is_child && (
-                    <div className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-medium">
+                    <div className="px-2 py-0.5 rounded-full bg-amber-100 dark:bg-amber-500/20 text-amber-700 dark:text-amber-400 text-xs font-medium flex items-center gap-1">
+                      <Users size={10} />
                       Child
                     </div>
                   )}
@@ -608,7 +647,8 @@ const ProfilePage = () => {
                     <PermissionBadge key={perm} permission={perm} />
                   ))}
                   {user.permissions.length > 8 && (
-                    <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 text-xs">
+                    <span className="px-2 py-1 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-500 text-xs flex items-center gap-1">
+                      <Hash size={10} />
                       +{user.permissions.length - 8} more
                     </span>
                   )}
@@ -624,6 +664,7 @@ const ProfilePage = () => {
                   name="language"
                   value={form.language}
                   onChange={handleChange}
+                  icon={Globe}
                   options={[
                     { value: "fr", label: "🇫🇷 Français" },
                     { value: "en", label: "🇬🇧 English" },
@@ -635,6 +676,7 @@ const ProfilePage = () => {
                   name="theme"
                   value={form.theme}
                   onChange={handleChange}
+                  icon={Paintbrush}
                   options={[
                     { value: "light", label: "☀️ Light" },
                     { value: "dark", label: "🌙 Dark" },
@@ -682,6 +724,7 @@ const ProfilePage = () => {
                           error={validationErrors.first_name}
                           required
                           placeholder="John"
+                          icon={User}
                         />
                         <FormField
                           label="Last Name"
@@ -691,6 +734,7 @@ const ProfilePage = () => {
                           error={validationErrors.last_name}
                           required
                           placeholder="Doe"
+                          icon={User}
                         />
                         <FormField
                           label="Username"
@@ -700,6 +744,7 @@ const ProfilePage = () => {
                           error={validationErrors.username}
                           required
                           placeholder="johndoe"
+                          icon={AtSign}
                         />
                         <FormField
                           label="Birth Date"
@@ -707,12 +752,14 @@ const ProfilePage = () => {
                           type="date"
                           value={form.birth_date}
                           onChange={handleChange}
+                          icon={Calendar}
                         />
                         <SelectField
                           label="Gender"
                           name="gender"
                           value={form.gender}
                           onChange={handleChange}
+                          icon={VenusMars}
                           options={[
                             { value: "", label: "Select" },
                             { value: "male", label: "Male" },
@@ -734,6 +781,7 @@ const ProfilePage = () => {
                           error={validationErrors.email}
                           required
                           placeholder="john@example.com"
+                          icon={Mail}
                         />
                         <FormField
                           label="Phone Number"
@@ -744,6 +792,7 @@ const ProfilePage = () => {
                           error={validationErrors.phone_number}
                           required
                           placeholder="+212 6XX XXX XXX"
+                          icon={Phone}
                         />
                       </div>
                     </InfoCard>
@@ -758,6 +807,7 @@ const ProfilePage = () => {
                           error={validationErrors.country}
                           required
                           placeholder="Morocco"
+                          icon={Flag}
                         />
                         <FormField
                           label="City"
@@ -767,6 +817,7 @@ const ProfilePage = () => {
                           error={validationErrors.city}
                           required
                           placeholder="Casablanca"
+                          icon={MapPin}
                         />
                         <FormField
                           label="Address"
@@ -774,6 +825,7 @@ const ProfilePage = () => {
                           value={form.address}
                           onChange={handleChange}
                           placeholder="Street, building, apartment"
+                          icon={Home}
                           className="md:col-span-2"
                         />
                       </div>
@@ -817,6 +869,7 @@ const ProfilePage = () => {
                               onChange={handleRoleChange}
                               placeholder={field.placeholder}
                               rows={field.rows || 3}
+                              icon={field.icon || BookOpen}
                             />
                           ) : (
                             <FormField
@@ -828,6 +881,7 @@ const ProfilePage = () => {
                               type={field.type || "text"}
                               required={field.required}
                               placeholder={field.placeholder}
+                              icon={field.icon}
                             />
                           )
                         ))}
@@ -855,5 +909,27 @@ const ProfilePage = () => {
     </div>
   );
 };
+
+// Composant manquant pour le thème
+const Paintbrush = (props) => (
+  <svg
+    {...props}
+    xmlns="http://www.w3.org/2000/svg"
+    width="24"
+    height="24"
+    viewBox="0 0 24 24"
+    fill="none"
+    stroke="currentColor"
+    strokeWidth="2"
+    strokeLinecap="round"
+    strokeLinejoin="round"
+  >
+    <path d="M18.37 2.63 14 7l-1.5-1.5L5 13l3 3L9.5 14.5 14 18l4.5-4.5-1.5-1.5 4.37-4.37a2.12 2.12 0 0 0 0-3l-1.5-1.5a2.12 2.12 0 0 0-3 0Z" />
+    <path d="m9 8-1 1" />
+    <path d="m6 13-1 1" />
+    <path d="M17 14a4 4 0 0 0-4 4" />
+    <path d="M21 18a4 4 0 0 0-4-4" />
+  </svg>
+);
 
 export default ProfilePage;

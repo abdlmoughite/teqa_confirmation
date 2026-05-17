@@ -1,43 +1,861 @@
+@import url("https://fonts.googleapis.com/css2?family=Syne:wght@500;700&family=DM+Sans:wght@300;400;500;700&display=swap");
+
+/* ==============================================
+   TEQA — Design Tokens
+   Source de vérité unique pour toutes les variables,
+   animations, et styles de base du projet.
+   globals.css est supprimé et fusionné ici.
+   ============================================== */
+
+/* ==============================================
+   LIGHT MODE (défaut)
+   ============================================== */
+
 :root {
-  /* Compatibility layer for legacy classes already used by the app. */
-  --color-primary-mid: var(--color-primary-hover);
-  --color-primary-surface: var(--color-primary-light);
-  --color-accent: var(--color-info);
-  --color-accent-light: var(--color-info-bg);
-  --color-dark-bg: var(--color-primary-dark);
-  --color-neutral: var(--text-muted);
-  --color-neutral-surface: var(--bg-surface-2);
-  --color-danger-surface: var(--color-danger-bg);
-  --color-warning-surface: var(--color-warning-bg);
-  --color-info-surface: var(--color-info-bg);
-  --color-agency-surface: var(--color-primary-light);
-  --color-agency: var(--color-primary-dark);
-  --color-agency-dot: var(--color-primary);
-  --color-agent-dot: var(--color-info);
-  --color-text: var(--text-primary);
-  --color-text-muted: var(--text-secondary);
-  --color-text-soft: var(--text-muted);
-  --color-border: var(--border-color);
-  --color-surface: var(--bg-surface);
-  --color-page: var(--bg-body);
-  --color-sidebar-text: var(--text-secondary);
-  --color-sidebar-hover: var(--bg-hover);
-  --color-overlay: rgba(15, 23, 42, 0.48);
-  --surface-muted: var(--bg-surface-2);
-  --text-soft: var(--text-muted);
-  --font-family-sans: var(--font-body);
-  --font-family-mono: var(--font-mono);
-  --font-size-h1: 2rem;
-  --font-size-h2: 1.5rem;
-  --font-size-h3: 1.25rem;
-  --font-size-body: 0.9375rem;
-  --font-size-label: 0.75rem;
-  --line-height-h1: 1.2;
-  --line-height-h2: 1.3;
-  --line-height-h3: 1.4;
-  --line-height-body: 1.6;
-  --letter-spacing-label: 0.04em;
-  --shadow-soft: var(--shadow-md);
-  --shadow-inset: inset 0 0 0 1px var(--border-color);
-  --shadow-pressed: inset 0 0 0 1px var(--border-strong);
+  /* Backgrounds */
+  --teqa-bg:       #f6f7f8;
+  --teqa-surface:  #ffffff;
+  --teqa-surface2: #eef1f3;
+  --teqa-surface3: #e3e8eb;
+  --teqa-sidebar:  #ffffff;
+
+  /* Borders */
+  --teqa-border:    rgba(26, 26, 26, 0.08);
+  --teqa-border-md: rgba(26, 26, 26, 0.14);
+
+  /* Brand — extraites du logo TEQA */
+  --teqa-green:       #22c55e;
+  --teqa-green-dim:   rgba(34, 197, 94, 0.12);
+  --teqa-green-hover: #16a34a;
+
+  --teqa-blue:     #3b82f6;
+  --teqa-blue-dim: rgba(59, 130, 246, 0.12);
+
+  --teqa-red:     #ef4444;
+  --teqa-red-dim: rgba(239, 68, 68, 0.12);
+
+  --teqa-warning: #f59e0b;
+
+  /* Text */
+  --teqa-text:     #1a1a1a;
+  --teqa-muted:    #5f666d;
+  --teqa-hint:     #8a9299;
+  --teqa-on-brand: #ffffff;
+
+  /* Semantic */
+  --teqa-success: var(--teqa-green);
+  --teqa-danger:  var(--teqa-red);
+  --teqa-info:    var(--teqa-blue);
+
+  /* Shimmer (skeleton) */
+  --teqa-shimmer: rgba(26, 26, 26, 0.05);
+
+  /* Fonts */
+  --font-display: "Syne", sans-serif;
+  --font-body:    "DM Sans", sans-serif;
+
+  /* Shadows */
+  --shadow-sm:   0 1px 2px rgba(26, 26, 26, 0.05);
+  --shadow-md:   0 14px 40px rgba(26, 26, 26, 0.08);
+  --shadow-lg:   0 20px 56px rgba(26, 26, 26, 0.12);
+  --shadow-card: 0 1px 2px rgba(26, 26, 26, 0.05);
+
+  /* Radius */
+  --radius-sm:   4px;
+  --radius-md:   8px;
+  --radius-lg:   10px;
+  --radius-xl:   14px;
+  --radius-full: 9999px;
+
+  /* Layout */
+  --sidebar-width:  220px;
+  --navbar-height:  68px;
+
+  /* Transitions */
+  --transition-fast:   150ms ease;
+  --transition-normal: 250ms ease;
+
+  /* Aliases de compatibilité (anciens screens) */
+  --color-primary:       var(--teqa-green);
+  --color-primary-hover: var(--teqa-green-hover);
+  --color-primary-light: var(--teqa-green-dim);
+  --color-primary-dark:  var(--teqa-green-hover);
+
+  --color-success:        var(--teqa-green);
+  --color-success-bg:     var(--teqa-green-dim);
+  --color-success-border: rgba(34, 197, 94, 0.25);
+
+  --color-warning:        var(--teqa-warning);
+  --color-warning-bg:     rgba(245, 158, 11, 0.12);
+  --color-warning-border: rgba(245, 158, 11, 0.24);
+
+  --color-danger:        var(--teqa-red);
+  --color-danger-bg:     var(--teqa-red-dim);
+  --color-danger-border: rgba(239, 68, 68, 0.25);
+
+  --color-info:        var(--teqa-blue);
+  --color-info-bg:     var(--teqa-blue-dim);
+  --color-info-border: rgba(59, 130, 246, 0.25);
+
+  --bg-body:      var(--teqa-bg);
+  --bg-surface:   var(--teqa-surface);
+  --bg-surface-2: var(--teqa-surface2);
+  --bg-sidebar:   var(--teqa-sidebar);
+  --bg-hover:     var(--teqa-surface3);
+  --bg-active:    var(--teqa-green-dim);
+
+  --text-primary:    var(--teqa-text);
+  --text-secondary:  var(--teqa-muted);
+  --text-muted:      var(--teqa-hint);
+  --text-on-primary: var(--teqa-on-brand);
+
+  --border-color:  var(--teqa-border);
+  --border-strong: var(--teqa-border-md);
+}
+
+/* ==============================================
+   DARK MODE
+   Aligné sur le logo TEQA (#2e2e2e)
+   ============================================== */
+
+.dark {
+  --teqa-bg:      #2e2e2e;
+  --teqa-surface: #3a3a3a;
+  --teqa-surface2: #444444;
+  --teqa-surface3: #505050;
+  --teqa-sidebar:  #1e1e1e;
+
+  --teqa-border:    rgba(255, 255, 255, 0.08);
+  --teqa-border-md: rgba(255, 255, 255, 0.14);
+
+  --teqa-text:  #f5f5f5;
+  --teqa-muted: #9a9a9a;
+  --teqa-hint:  #666666;
+
+  /* FIX — shimmer visible en dark mode */
+  --teqa-shimmer: rgba(255, 255, 255, 0.06);
+
+  --shadow-sm:   none;
+  --shadow-md:   0 14px 40px rgba(0, 0, 0, 0.18);
+  --shadow-lg:   0 20px 56px rgba(0, 0, 0, 0.24);
+  --shadow-card: none;
+
+  --bg-body:      var(--teqa-bg);
+  --bg-surface:   var(--teqa-surface);
+  --bg-surface-2: var(--teqa-surface2);
+  --bg-sidebar:   var(--teqa-sidebar);
+  --bg-hover:     var(--teqa-surface3);
+  --bg-active:    var(--teqa-green-dim);
+
+  --text-primary:   var(--teqa-text);
+  --text-secondary: var(--teqa-muted);
+  --text-muted:     var(--teqa-hint);
+
+  --border-color:  var(--teqa-border);
+  --border-strong: var(--teqa-border-md);
+}
+
+/* ==============================================
+   RESET
+   ============================================== */
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  background: var(--teqa-bg);
+}
+
+body {
+  margin: 0;
+  color: var(--teqa-text);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+/* ==============================================
+   TYPOGRAPHY
+   ============================================== */
+
+h1,
+h2,
+h3,
+.text-display,
+.text-title,
+.teqa-display,
+.teqa-title {
+  color: var(--teqa-text);
+  font-family: var(--font-display);
+  letter-spacing: 0;
+}
+
+.text-display { font-size: 28px; font-weight: 700; }
+.text-title   { font-size: 20px; font-weight: 500; }
+
+.text-heading {
+  color: var(--teqa-text);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.text-body {
+  color: var(--teqa-text);
+  font-size: 14px;
+  font-weight: 400;
+}
+
+.text-sm { color: var(--teqa-muted); font-size: 12px; }
+.text-xs { color: var(--teqa-hint);  font-size: 10px; }
+
+.text-label,
+.eyebrow,
+.ui-label,
+.teqa-label {
+  color: var(--teqa-hint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ==============================================
+   SCROLLBAR
+   ============================================== */
+
+::-webkit-scrollbar        { width: 8px; height: 8px; }
+::-webkit-scrollbar-track  { background: transparent; }
+::-webkit-scrollbar-thumb  { background: var(--teqa-surface3); border-radius: var(--radius-full); }
+::-webkit-scrollbar-thumb:hover { background: var(--teqa-muted); }
+
+/* ==============================================
+   ANIMATIONS
+   ============================================== */
+
+@keyframes teqa-fadein {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes teqa-shimmer {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+@keyframes teqa-pulse {
+  0%, 100% { opacity: 1;   transform: translateY(0); }
+  50%       { opacity: 0.4; transform: translateY(-4px); }
+}
+
+.page-enter,
+.teqa-fade-in {
+  animation: teqa-fadein 0.3s ease forwards;
+}
+
+/* ==============================================
+   LOADING SCREEN
+   ============================================== */
+
+.teqa-loading-screen {
+  align-items: center;
+  background: var(--teqa-bg);
+  display: flex;
+  flex-direction: column;
+  inset: 0;
+  justify-content: center;
+  opacity: 1;
+  position: fixed;
+  transition: opacity 0.3s ease, visibility 0.3s ease;
+  visibility: visible;
+  z-index: 9999;
+}
+
+.teqa-loading-screen--leaving {
+  opacity: 0;
+  visibility: hidden;
+}
+
+.teqa-loading-mark        { margin-bottom: 24px; overflow: visible; }
+.teqa-loading-tri         { animation: teqa-pulse 1.2s ease-in-out infinite 0s; }
+.teqa-loading-bar1        { animation: teqa-pulse 1.2s ease-in-out infinite 0.2s; }
+.teqa-loading-bar2        { animation: teqa-pulse 1.2s ease-in-out infinite 0.4s; }
+
+.teqa-loading-wordmark {
+  color: var(--teqa-text);
+  font-family: var(--font-display);
+  font-size: 28px;
+  font-weight: 700;
+  letter-spacing: 0;
+  margin-bottom: 32px;
+}
+
+.teqa-loading-dots        { display: flex; gap: 6px; }
+.teqa-loading-dots span {
+  animation: teqa-pulse 1.2s ease-in-out infinite;
+  border-radius: var(--radius-full);
+  display: block;
+  height: 6px;
+  width: 6px;
+}
+.teqa-loading-dots span:nth-child(1) { animation-delay: 0s;    background: var(--teqa-green); }
+.teqa-loading-dots span:nth-child(2) { animation-delay: 0.2s;  background: var(--teqa-blue); }
+.teqa-loading-dots span:nth-child(3) { animation-delay: 0.4s;  background: var(--teqa-red); }
+
+/* ==============================================
+   LOGO
+   ============================================== */
+
+.teqa-logo {
+  align-items: center;
+  display: inline-flex;
+  gap: 6px;
+}
+
+.teqa-logo__text {
+  color: var(--teqa-text);
+  font-family: var(--font-display);
+  font-size: var(--teqa-logo-size, 24px);
+  font-weight: 700;
+  letter-spacing: 0;
+  line-height: 1;
+}
+
+.teqa-logo__mark { flex: 0 0 auto; }
+
+/* ==============================================
+   INPUTS
+   FIX — 0.5px border, focus ring vert (pas bleu)
+   ============================================== */
+
+input,
+select,
+textarea {
+  background: var(--teqa-bg);
+  border: 0.5px solid var(--teqa-border-md);
+  border-radius: var(--radius-lg);
+  color: var(--teqa-text);
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s, background 0.15s;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: var(--teqa-hint);
+}
+
+/* FIX — focus ring vert uniforme sur toute l'app */
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--teqa-green);
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  outline: none;
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+}
+
+/* Input wrapper avec icône */
+.teqa-input-wrap          { display: block; position: relative; width: 100%; }
+.teqa-input-wrap__icon    { color: var(--teqa-hint); left: 12px; pointer-events: none; position: absolute; top: 50%; transform: translateY(-50%); }
+.teqa-input--with-icon    { padding-left: 40px; }
+
+/* ==============================================
+   LOGIN PAGE
+   ============================================== */
+
+.teqa-login {
+  align-items: center;
+  background: var(--teqa-bg);
+  color: var(--teqa-text);
+  display: flex;
+  justify-content: center;
+  min-height: 100vh;
+  padding: 24px;
+}
+
+.teqa-login__card { border-radius: 16px; }
+
+.teqa-role-toggle {
+  background: var(--teqa-bg);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-full);
+  display: grid;
+  gap: 4px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 4px;
+}
+
+.teqa-role-toggle__item {
+  border-radius: var(--radius-full);
+  color: var(--teqa-muted);
+  font-size: 14px;
+  font-weight: 500;
+  min-height: 36px;
+  transition: background 0.15s, color 0.15s;
+}
+
+.teqa-role-toggle__item.active       { background: var(--teqa-green-dim); color: var(--teqa-green); }
+.teqa-role-toggle__item.active-agent { background: var(--teqa-blue-dim);  color: var(--teqa-blue); }
+
+/* Bouton submit bleu quand rôle = Agent */
+.teqa-login-submit--agent {
+  background: var(--teqa-blue) !important;
+  border-color: var(--teqa-blue) !important;
+}
+
+.teqa-login__divider {
+  align-items: center;
+  color: var(--teqa-hint);
+  display: flex;
+  font-size: 12px;
+  gap: 12px;
+}
+.teqa-login__divider::before,
+.teqa-login__divider::after {
+  background: var(--teqa-border);
+  content: "";
+  flex: 1;
+  height: 0.5px;
+}
+
+/* ==============================================
+   CARDS
+   FIX — border 0.5px
+   ============================================== */
+
+.teqa-card {
+  background: var(--teqa-surface);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-xl);
+  color: var(--teqa-text);
+  transition: border-color 0.2s;
+}
+
+.teqa-card:hover,
+.teqa-card--hover:hover {
+  border-color: var(--teqa-border-md);
+}
+
+.teqa-card__header {
+  border-bottom: 0.5px solid var(--teqa-border);
+  color: var(--teqa-hint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  margin: 0 20px;
+  padding: 14px 0 12px;
+  text-transform: uppercase;
+}
+
+.teqa-card__body { padding: 16px 20px; }
+
+/* ==============================================
+   STAT CARDS (dashboard)
+   ============================================== */
+
+.teqa-stat {
+  animation: teqa-fadein 0.3s ease forwards;
+  padding: 16px;
+}
+
+.teqa-stat__label {
+  color: var(--teqa-hint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  margin: 0;
+  text-transform: uppercase;
+}
+
+.teqa-stat__value {
+  color: var(--teqa-text);
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 500;
+  line-height: 1.2;
+  margin: 12px 0 0;
+}
+
+.teqa-stat__delta           { font-size: 12px; margin: 10px 0 0; }
+.teqa-stat__delta--up       { color: var(--teqa-green); }
+.teqa-stat__delta--down     { color: var(--teqa-red); }
+.teqa-stat__delta--neutral  { color: var(--teqa-muted); }
+
+/* ==============================================
+   OFFER ROW & ACTIVITY ROW
+   ============================================== */
+
+.teqa-offer-row,
+.teqa-activity-row {
+  align-items: center;
+  background: var(--teqa-surface2);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-lg);
+  display: flex;
+  gap: 12px;
+  padding: 12px;
+}
+
+.teqa-activity-row { align-items: flex-start; }
+
+.teqa-activity-row__dot {
+  background: var(--teqa-green);
+  border-radius: var(--radius-full);
+  box-shadow: 0 0 0 4px var(--teqa-green-dim);
+  flex: 0 0 auto;
+  height: 8px;
+  margin-top: 6px;
+  width: 8px;
+}
+
+.teqa-activity-row p   { color: var(--teqa-text); font-size: 14px; font-weight: 500; margin: 0; }
+.teqa-activity-row span { color: var(--teqa-muted); font-size: 12px; }
+
+/* ==============================================
+   OFFER CARD (marketplace)
+   FIX — border 0.5px
+   ============================================== */
+
+.teqa-offer-card {
+  background: var(--teqa-surface);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-xl);
+  color: var(--teqa-text);
+  padding: 18px;
+  transition: border-color 0.2s, transform 0.2s;
+}
+
+.teqa-offer-card:hover {
+  border-color: var(--teqa-border-md);
+}
+
+/* ==============================================
+   FILTER PILLS (marketplace)
+   ============================================== */
+
+.teqa-filter-pills {
+  background: var(--teqa-bg);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-full);
+  display: grid;
+  gap: 3px;
+  grid-auto-flow: column;
+  min-height: 42px;
+  padding: 4px;
+}
+
+.teqa-filter-pills button {
+  border-radius: var(--radius-full);
+  color: var(--teqa-muted);
+  font-size: 12px;
+  font-weight: 500;
+  padding: 0 10px;
+  white-space: nowrap;
+}
+
+.teqa-filter-pills button.active {
+  background: var(--teqa-green-dim);
+  color: var(--teqa-green);
+}
+
+/* ==============================================
+   NÉGOCIATION — Thread
+   ============================================== */
+
+.teqa-thread {
+  background: var(--teqa-surface);
+  border: 0.5px solid var(--teqa-border);
+  border-radius: var(--radius-xl);
+  display: grid;
+  grid-template-rows: minmax(220px, 1fr) auto;
+  overflow: hidden;
+}
+
+.teqa-thread__messages {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  max-height: 520px;
+  overflow-y: auto;
+  padding: 18px;
+}
+
+.teqa-thread-message {
+  align-items: flex-start;
+  display: flex;
+  flex-direction: column;
+  max-width: min(76%, 560px);
+}
+
+.teqa-thread-message.mine {
+  align-items: flex-end;
+  align-self: flex-end;
+}
+
+.teqa-thread-message__role {
+  color: var(--teqa-hint);
+  font-size: 10px;
+  margin-bottom: 4px;
+  text-transform: uppercase;
+}
+
+.teqa-thread-message__bubble {
+  color: var(--teqa-text);
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 10px 12px;
+}
+
+.teqa-thread-message__bubble.other {
+  background: var(--teqa-surface2);
+  border-radius: 10px 10px 10px 2px;
+}
+
+.teqa-thread-message__bubble.mine {
+  background: var(--teqa-green);
+  border-radius: 10px 10px 2px 10px;
+  color: var(--teqa-on-brand);
+}
+
+.teqa-thread-message__accepted {
+  align-items: center;
+  color: var(--teqa-green);
+  display: inline-flex;
+  font-weight: 500;
+  gap: 6px;
+}
+
+.teqa-thread__footer {
+  align-items: center;
+  border-top: 0.5px solid var(--teqa-border);
+  display: grid;
+  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  padding: 12px;
+}
+
+/* ==============================================
+   TABLE (commissions / orders)
+   ============================================== */
+
+.teqa-table {
+  border-collapse: separate;
+  border-spacing: 0;
+  min-width: 720px;
+  width: 100%;
+}
+
+.teqa-table th {
+  border-bottom: 0.5px solid var(--teqa-border);
+  color: var(--teqa-hint);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0.1em;
+  padding: 10px 12px;
+  text-align: left;
+  text-transform: uppercase;
+}
+
+.teqa-table td {
+  border-bottom: 0.5px solid var(--teqa-border);
+  color: var(--teqa-text);
+  font-size: 14px;
+  padding: 14px 12px;
+}
+
+.teqa-table tr:last-child td { border-bottom: 0; }
+
+/* ==============================================
+   WALLET SUMMARY
+   ============================================== */
+
+.teqa-wallet-summary {
+  background: linear-gradient(135deg, var(--teqa-surface), var(--teqa-surface2));
+}
+
+/* ==============================================
+   SKELETON / SHIMMER
+   ============================================== */
+
+.teqa-skeleton {
+  background: var(--teqa-surface2);
+  border-radius: var(--radius-lg);
+  display: block;
+  min-height: 16px;
+  overflow: hidden;
+  position: relative;
+}
+
+.teqa-skeleton::after {
+  animation: teqa-shimmer 1.4s ease infinite;
+  background: linear-gradient(90deg, transparent, var(--teqa-shimmer), transparent);
+  content: "";
+  inset: 0;
+  position: absolute;
+  transform: translateX(-100%);
+}
+
+/* ==============================================
+   TOAST
+   FIX — border 0.5px
+   ============================================== */
+
+.toast-viewport {
+  bottom: 20px;
+  display: grid;
+  gap: 10px;
+  max-width: min(360px, calc(100vw - 32px));
+  position: fixed;
+  right: 20px;
+  width: 100%;
+  z-index: 10000;
+}
+
+.toast-card {
+  align-items: flex-start;
+  background: var(--teqa-surface);
+  border: 0.5px solid var(--teqa-border-md);
+  border-left: 3px solid var(--teqa-blue);
+  border-radius: var(--radius-lg);
+  color: var(--teqa-text);
+  display: flex;
+  gap: 12px;
+  padding: 12px 16px;
+}
+
+.toast-card--success { border-left-color: var(--teqa-green); }
+.toast-card--error   { border-left-color: var(--teqa-red); }
+.toast-card--info    { border-left-color: var(--teqa-blue); }
+.toast-card--warning { border-left-color: var(--teqa-warning); }
+
+.toast-icon  { color: inherit; display: grid; flex: 0 0 auto; place-items: center; }
+.toast-title { color: var(--teqa-text); font-size: 14px; font-weight: 500; margin: 0; }
+.toast-message { color: var(--teqa-muted); font-size: 12px; margin: 4px 0 0; }
+.toast-close   { color: var(--teqa-muted); line-height: 0; padding: 2px; }
+
+.toast-card--success .toast-icon,
+.toast-card--success .toast-close:hover { color: var(--teqa-green); }
+
+.toast-card--error .toast-icon,
+.toast-card--error .toast-close:hover   { color: var(--teqa-red); }
+
+.toast-card--info .toast-icon,
+.toast-card--info .toast-close:hover    { color: var(--teqa-blue); }
+
+/* ==============================================
+   BOTTOM NAV (mobile)
+   ============================================== */
+
+.teqa-bottom-nav {
+  align-items: center;
+  background: var(--teqa-sidebar);
+  border-top: 0.5px solid var(--teqa-border);
+  bottom: 0;
+  display: none;
+  gap: 2px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  left: 0;
+  min-height: 64px;
+  padding: 6px 8px;
+  position: fixed;
+  right: 0;
+  z-index: 60;
+}
+
+.teqa-bottom-nav__item {
+  align-items: center;
+  border-radius: var(--radius-lg);
+  color: var(--teqa-muted);
+  display: flex;
+  flex-direction: column;
+  font-size: 10px;
+  gap: 4px;
+  justify-content: center;
+  min-height: 50px;
+}
+
+.teqa-bottom-nav__item.active       { color: var(--teqa-green); }
+.teqa-bottom-nav__item.active svg   { stroke: var(--teqa-green); }
+
+/* ==============================================
+   MESSAGE BUBBLES
+   ============================================== */
+
+.message-bubble {
+  max-width: 85%;
+  padding: 12px 16px;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.message-bubble.sent {
+  background: var(--teqa-green);
+  border-radius: 10px 10px 2px 10px;
+  color: var(--teqa-on-brand);
+}
+
+.message-bubble.received {
+  background: var(--teqa-surface2);
+  border-radius: 10px 10px 10px 2px;
+  color: var(--teqa-text);
+}
+
+.message-meta  { color: var(--teqa-muted); font-size: 10px; }
+
+.message-input {
+  background: var(--teqa-bg);
+  border: 0.5px solid var(--teqa-border-md);
+  border-radius: var(--radius-lg);
+  color: var(--teqa-text);
+  min-height: 96px;
+  padding: 12px 14px;
+}
+
+/* ==============================================
+   RESPONSIVE
+   ============================================== */
+
+@media (max-width: 767px) {
+  .teqa-bottom-nav { display: grid; }
+
+  .toast-viewport {
+    bottom: 76px;
+    right: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .text-display { font-size: 22px; }
+  .text-title   { font-size: 18px; }
+}
+
+/* ==============================================
+   REDUCED MOTION
+   ============================================== */
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
 }

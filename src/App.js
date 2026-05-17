@@ -8,6 +8,7 @@ import { LanguageProvider } from './context/LanguageContext';
 import { ToastProvider } from './context/ToastContext';
 import PrivateRoute from './router/PrivateRoute';
 import { BrowserRouter } from "react-router-dom";
+import LoadingScreen from './components/ui/LoadingScreen';
 
 function App() {
   return (
@@ -17,6 +18,7 @@ function App() {
           <ToastProvider>
             <LanguageProvider>
               <div className="App">
+                <LoadingScreen />
                 <PrivateRoute>
                   <AppConfirmation />
                 </PrivateRoute>

@@ -439,7 +439,7 @@ const CollaborationDetails = () => {
           <div className="flex items-center justify-between flex-wrap gap-4">
             <div className="flex items-center gap-4">
               <Link to="/collaborations" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
+                <ArrowLeft size={20} className="text-white dark:text-black" />
               </Link>
               <div>
                 <div className="flex items-center gap-3 flex-wrap">

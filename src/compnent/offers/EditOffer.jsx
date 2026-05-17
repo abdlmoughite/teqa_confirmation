@@ -1,4 +1,4 @@
-// EditOffer.jsx
+// EditOffer.jsx - Version avec couleurs adaptées
 import { useState, useEffect } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
@@ -64,8 +64,8 @@ const Toast = ({ message, type, onClose }) => {
       exit={{ opacity: 0, x: 50, y: -20 }}
       className="fixed top-20 right-4 z-50"
     >
-      <div className={`flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-900 border shadow-xl max-w-md backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 border-gray-200 dark:border-gray-800`}>
-        <div className={`p-1.5 rounded-lg bg-gradient-to-r ${config.gradient} bg-opacity-10`}>
+      <div className="flex items-center gap-3 p-4 rounded-xl bg-white dark:bg-gray-900 border shadow-xl max-w-md backdrop-blur-sm bg-opacity-95 dark:bg-opacity-95 border-gray-200 dark:border-gray-800">
+        <div className={`p-1.5 rounded-lg bg-gradient-to-r ${config.gradient}`}>
           <Icon size={18} className="text-white" />
         </div>
         <p className="text-sm font-medium text-gray-800 dark:text-gray-200 flex-1">{message}</p>
@@ -85,25 +85,25 @@ const PreviewCard = ({ form, statusColor }) => (
   <motion.div 
     initial={{ opacity: 0, x: 20 }}
     animate={{ opacity: 1, x: 0 }}
-    className="bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 dark:from-gray-800 dark:via-gray-800/50 dark:to-gray-900 rounded-2xl border border-blue-100 dark:border-gray-700 overflow-hidden sticky top-6 shadow-lg"
+    className="bg-white dark:bg-gray-900 rounded-2xl border border-gray-200 dark:border-gray-800 overflow-hidden sticky top-6 shadow-lg"
   >
-    <div className="px-5 py-4 border-b border-blue-100 dark:border-gray-700 bg-white/50 dark:bg-gray-800/50">
+    <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <Eye size={16} className="text-blue-500" />
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-blue-600 dark:text-blue-400">
+          <Eye size={16} className="text-emerald-500" />
+          <h3 className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
             Live Preview
           </h3>
         </div>
-        <Zap size={14} className="text-blue-400" />
+        <Zap size={14} className="text-emerald-400" />
       </div>
     </div>
     
     <div className="p-5 space-y-4">
       {/* Title Preview */}
-      <div className="group">
+      <div>
         <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Title</span>
-        <p className="font-semibold text-gray-800 dark:text-white mt-1 text-lg">
+        <p className="font-semibold text-gray-900 dark:text-white mt-1 text-lg">
           {form.titre || "—"}
         </p>
       </div>
@@ -111,7 +111,7 @@ const PreviewCard = ({ form, statusColor }) => (
       {/* Description Preview */}
       <div>
         <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Description</span>
-        <div className="mt-2 p-3 bg-white dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
+        <div className="mt-2 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-700">
           <p className="text-sm text-gray-600 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
             {form.description || "—"}
           </p>
@@ -119,11 +119,11 @@ const PreviewCard = ({ form, statusColor }) => (
       </div>
       
       {/* Price & Status Preview */}
-      <div className="flex justify-between items-center pt-3 border-t border-blue-100 dark:border-gray-700">
+      <div className="flex justify-between items-center pt-3 border-t border-gray-200 dark:border-gray-700">
         <div>
           <span className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider">Price</span>
           <div className="flex items-baseline gap-1 mt-1">
-            <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+            <span className="text-2xl font-bold text-emerald-600 dark:text-emerald-400">
               {form.prix ? parseFloat(form.prix).toLocaleString() : "0"}
             </span>
             <span className="text-sm text-gray-500 dark:text-gray-400">
@@ -386,16 +386,10 @@ const EditOffer = () => {
   const getStatusColor = (status) => {
     switch (status) {
       case 'active': return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/20 dark:text-emerald-400 border-emerald-200 dark:border-emerald-500/20';
-      case 'inactive': return 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400 border-slate-200 dark:border-slate-700';
+      case 'inactive': return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400 border-gray-200 dark:border-gray-700';
       case 'archived': return 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-400 border-amber-200 dark:border-amber-500/20';
       default: return 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400';
     }
-  };
-
-  const getStatusIcon = (status) => {
-    const option = STATUS_OPTIONS.find(s => s.value === status);
-    const Icon = option?.icon || CheckCircle;
-    return <Icon size={14} />;
   };
 
   /* =========================================================
@@ -403,14 +397,14 @@ const EditOffer = () => {
   ========================================================= */
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950 flex items-center justify-center">
+      <div className="min-h-screen bg-white dark:bg-gray-950 flex items-center justify-center">
         <div className="text-center">
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
             className="w-16 h-16 mx-auto mb-4"
           >
-            <div className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-800 border-t-blue-500 dark:border-t-blue-400" />
+            <div className="w-full h-full rounded-full border-4 border-gray-200 dark:border-gray-800 border-t-emerald-500 dark:border-t-emerald-400" />
           </motion.div>
           <p className="text-gray-500 dark:text-gray-400">Loading offer...</p>
         </div>
@@ -423,7 +417,7 @@ const EditOffer = () => {
   ========================================================= */
   if (apiError && !loading && !originalData) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-6">
+      <div className="min-h-screen bg-white dark:bg-gray-950 p-6">
         <div className="max-w-4xl mx-auto">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
@@ -459,7 +453,7 @@ const EditOffer = () => {
      MAIN RENDER
   ========================================================= */
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-100 dark:from-gray-950 dark:via-gray-900 dark:to-gray-950">
+    <div className="bg-gray-10 dark:bg-gray-600 min-h-screen">
       <AnimatePresence>
         {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
       </AnimatePresence>
@@ -483,7 +477,7 @@ const EditOffer = () => {
               </motion.button>
               
               <div>
-                <h1 className="text-2xl md:text-3xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+                <h1 className="text-2xl md:text-3xl font-bold text-gray-900 dark:text-white">
                   Edit Offer
                 </h1>
                 <p className="text-gray-500 dark:text-gray-400 mt-1">
@@ -524,10 +518,10 @@ const EditOffer = () => {
             animate={{ opacity: 1, x: 0 }}
             className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-200 dark:border-gray-800 overflow-hidden"
           >
-            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900">
+            <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/50">
               <div className="flex items-center gap-2">
-                <Shield size={18} className="text-blue-500" />
-                <h2 className="text-lg font-semibold text-gray-800 dark:text-white">
+                <Shield size={18} className="text-emerald-500" />
+                <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
                   Offer Information
                 </h2>
               </div>
@@ -553,11 +547,12 @@ const EditOffer = () => {
                   className={`
                     w-full px-4 py-2.5 rounded-xl border transition-all duration-200
                     bg-white dark:bg-gray-800
-                    text-gray-800 dark:text-white
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                    text-gray-900 dark:text-white
+                    placeholder:text-gray-400 dark:placeholder:text-gray-500
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
                     ${touched.titre && errors.titre 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-600'
                     }
                   `}
                   autoFocus
@@ -572,11 +567,11 @@ const EditOffer = () => {
                   </motion.p>
                 )}
                 <div className="flex justify-between mt-1">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     {form.titre.length}/100 characters
                   </p>
                   {form.titre.length > 80 && form.titre.length <= 100 && (
-                    <p className="text-xs text-yellow-500">Getting long</p>
+                    <p className="text-xs text-amber-500">Getting long</p>
                   )}
                 </div>
               </div>
@@ -597,11 +592,12 @@ const EditOffer = () => {
                   className={`
                     w-full px-4 py-2.5 rounded-xl border transition-all duration-200 resize-none
                     bg-white dark:bg-gray-800
-                    text-gray-800 dark:text-white
-                    focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                    text-gray-900 dark:text-white
+                    placeholder:text-gray-400 dark:placeholder:text-gray-500
+                    focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
                     ${touched.description && errors.description 
                       ? 'border-red-500 focus:ring-red-500' 
-                      : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                      : 'border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-600'
                     }
                   `}
                 />
@@ -615,11 +611,11 @@ const EditOffer = () => {
                   </motion.p>
                 )}
                 <div className="flex justify-between mt-1">
-                  <p className="text-xs text-gray-400">
+                  <p className="text-xs text-gray-400 dark:text-gray-500">
                     {form.description.length}/2000 characters
                   </p>
                   {form.description.length > 1500 && (
-                    <p className="text-xs text-yellow-500">Getting long</p>
+                    <p className="text-xs text-amber-500">Getting long</p>
                   )}
                 </div>
               </div>
@@ -632,7 +628,7 @@ const EditOffer = () => {
                     Price <span className="text-red-500">*</span>
                   </label>
                   <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">MAD</span>
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 dark:text-gray-400">MAD</span>
                     <input
                       type="number"
                       name="prix"
@@ -645,11 +641,11 @@ const EditOffer = () => {
                       className={`
                         w-full pl-16 pr-4 py-2.5 rounded-xl border transition-all duration-200
                         bg-white dark:bg-gray-800
-                        text-gray-800 dark:text-white
-                        focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent
+                        text-gray-900 dark:text-white
+                        focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent
                         ${touched.prix && errors.prix 
                           ? 'border-red-500 focus:ring-red-500' 
-                          : 'border-gray-300 dark:border-gray-700 hover:border-blue-400'
+                          : 'border-gray-300 dark:border-gray-700 hover:border-emerald-400 dark:hover:border-emerald-600'
                         }
                       `}
                     />
@@ -686,7 +682,7 @@ const EditOffer = () => {
                       </option>
                     ))}
                   </select>
-                  <p className="mt-1.5 text-xs text-gray-400">
+                  <p className="mt-1.5 text-xs text-gray-400 dark:text-gray-500">
                     Currency cannot be changed
                   </p>
                 </div>
@@ -724,7 +720,7 @@ const EditOffer = () => {
                           onChange={handleChange}
                           className="hidden"
                         />
-                        <Icon size={14} />
+                        <Icon size={14} className={isSelected ? 'currentColor' : 'text-gray-500 dark:text-gray-400'} />
                         <span className="text-sm font-medium">
                           {option.label}
                         </span>
@@ -751,8 +747,8 @@ const EditOffer = () => {
                     flex-1 py-2.5 rounded-xl font-medium text-white
                     transition-all duration-200 flex items-center justify-center gap-2
                     ${saving || !hasChanges()
-                      ? 'bg-gray-400 cursor-not-allowed' 
-                      : 'bg-gradient-to-r from-blue-500 to-indigo-600 hover:from-blue-600 hover:to-indigo-700 shadow-md hover:shadow-lg'
+                      ? 'bg-gray-400 dark:bg-gray-600 cursor-not-allowed' 
+                      : 'bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 shadow-md hover:shadow-lg'
                     }
                   `}
                 >
@@ -830,7 +826,7 @@ const EditOffer = () => {
                     <div className="w-12 h-12 bg-red-100 dark:bg-red-900/30 rounded-full flex items-center justify-center">
                       <Trash2 size={22} className="text-red-600 dark:text-red-400" />
                     </div>
-                    <h3 className="text-xl font-semibold text-gray-800 dark:text-white">Delete Offer</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Delete Offer</h3>
                   </div>
                   
                   <p className="text-gray-600 dark:text-gray-300 mb-2">

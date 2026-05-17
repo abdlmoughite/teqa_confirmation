@@ -25,26 +25,19 @@ import { AuthContext } from "../context/AuthContext";
 import { LanguageContext } from "../context/LanguageContext";
 import { useTheme } from "../context/ThemeContext";
 import { ROUTE_PERMISSIONS } from "../config/permissions";
+import TeqaLogo from "../components/ui/TeqaLogo";
 
-// Logo component with light/dark mode support
-const PubliQyLogo = ({ isOpen, theme }) => {
-  const logoSrc = theme === "dark" 
-    ? "/LOGO TIQA PNG WHITE.png" 
-    : "/LOGO TIQA PNG BLACK.png";
-
+// TEQA brand mark, keeping the original sidebar behavior intact.
+const PubliQyLogo = ({ isOpen }) => {
   return (
     <div className="flex items-center gap-3">
-      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-primary-500 to-primary-600 shadow-md dark:from-primary-600 dark:to-primary-700">
-        <img 
-          src={logoSrc} 
-          alt="PubliQy" 
-          className="h-7 w-7 object-contain"
-        />
+      <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-xl bg-[var(--teqa-green-dim)] text-[var(--teqa-green)]">
+        <TeqaLogo size="sm" showText={false} />
       </div>
       {isOpen && (
         <div className="min-w-0">
           <p className="truncate text-base font-bold tracking-tight text-slate-900 dark:text-white">
-            PubliQy
+            TEQA
           </p>
           <p className="truncate text-xs text-emerald-600 dark:text-emerald-400">
             Connect. Confirm. Deliver.

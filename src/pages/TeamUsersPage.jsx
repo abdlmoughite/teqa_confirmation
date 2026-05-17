@@ -587,7 +587,7 @@ const TeamUsersPage = () => {
           </div>
           <div className="flex items-center gap-3">
             <div className="px-4 py-2 rounded-xl bg-gradient-to-r from-blue-500/10 to-indigo-500/10 border border-blue-200 dark:border-blue-800">
-              <span className="text-sm font-semibold text-blue-700 dark:text-blue-400">
+              <span className="text-sm font-semibold text-white dark:text-black">
                 {users.length} {t("team.accounts", "accounts")}
               </span>
             </div>
@@ -610,7 +610,7 @@ const TeamUsersPage = () => {
           >
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-800">
               <div className="p-2 rounded-xl bg-gradient-to-br from-emerald-500/10 to-green-500/10">
-                <UserPlus size={18} className="text-emerald-600" />
+                <UserPlus size={18} className="text-emerald-600 dark:text-emerald-400" />
               </div>
               <h2 className="font-semibold text-gray-800 dark:text-white">
                 {t("team.create", "Create child user")}
@@ -686,7 +686,7 @@ const TeamUsersPage = () => {
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
                 >
                   {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
@@ -730,7 +730,7 @@ const TeamUsersPage = () => {
             {/* Permissions Section */}
             <div className="mt-4 p-4 rounded-xl bg-gray-50 dark:bg-gray-800/30">
               <div className="flex items-center gap-2 mb-3">
-                <ShieldCheck size={16} className="text-emerald-500" />
+                <ShieldCheck size={16} className="text-emerald-500 dark:text-emerald-400" />
                 <span className="text-sm font-semibold text-gray-800 dark:text-white">
                   {t("team.permissions", "Permissions")}
                 </span>
@@ -746,7 +746,7 @@ const TeamUsersPage = () => {
                     className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-left transition-all hover:border-emerald-300 hover:shadow-sm"
                   >
                     <div className="flex items-center gap-2">
-                      <preset.icon size={14} className="text-gray-400 group-hover:text-emerald-500" />
+                      <preset.icon size={14} className="text-gray-700 dark:text-gray-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
                       <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{preset.label}</span>
                     </div>
                     <p className="text-xs text-gray-400 mt-0.5">{preset.description}</p>
@@ -850,7 +850,7 @@ const TeamUsersPage = () => {
           >
             <div className="flex items-center gap-2 mb-4 pb-3 border-b border-gray-200 dark:border-gray-800">
               <div className="p-2 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
-                <Users size={18} className="text-blue-600" />
+                <Users size={18} className="text-white dark:text-black" />
               </div>
               <div>
                 <h2 className="font-semibold text-gray-800 dark:text-white">
@@ -916,7 +916,7 @@ const TeamUsersPage = () => {
                 <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="p-2.5 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10">
-                      <ShieldCheck size={20} className="text-blue-600" />
+                      <ShieldCheck size={20} className="text-blue-600 dark:text-blue-400" />
                     </div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900 dark:text-white">
@@ -943,7 +943,7 @@ const TeamUsersPage = () => {
                         className="group rounded-xl border border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 text-left transition-all hover:border-emerald-300"
                       >
                         <div className="flex items-center gap-2">
-                          <preset.icon size={14} className="text-gray-400 group-hover:text-emerald-500" />
+                          <preset.icon size={14} className="text-gray-700 dark:text-gray-300 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
                           <span className="text-xs font-semibold text-gray-700 dark:text-gray-300">{preset.label}</span>
                         </div>
                       </button>

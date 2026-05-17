@@ -547,15 +547,15 @@ const ListOffers = () => {
                 <tbody className="divide-y divide-gray-200 dark:divide-gray-800">
                   {paginatedOffers.map((offer) => (
                     <tr key={offer.id} className="hover:bg-gray-50 dark:hover:bg-gray-800/50 transition-colors group">
-                      {/* Title Column with Tooltip for long titles */}
+                      {/* Title Column */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-gradient-to-br from-blue-100 to-blue-200 dark:from-blue-900/30 dark:to-blue-800/30 rounded-lg flex items-center justify-center flex-shrink-0">
-                            <Package size={16} className="text-blue-600 dark:text-blue-400" />
+                          <div className="w-8 h-8 bg-gradient-to-br from-emerald-100 to-emerald-200 dark:from-emerald-900/30 dark:to-emerald-800/30 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <Package size={16} className="text-emerald-600 dark:text-emerald-400" />
                           </div>
                           <div className="min-w-0 flex-1">
                             <p 
-                              className="font-medium text-gray-800 dark:text-white truncate max-w-[200px] md:max-w-[300px]"
+                              className="font-medium text-gray-900 dark:text-white truncate max-w-[200px] md:max-w-[300px]"
                               onMouseEnter={() => handleTitleMouseEnter(offer.titre)}
                               onMouseLeave={handleTitleMouseLeave}
                             >
@@ -563,7 +563,7 @@ const ListOffers = () => {
                             </p>
                             <div className="flex items-center gap-2 mt-1 md:hidden">
                               {renderStatusBadge(offer.status)}
-                              <span className="text-xs text-gray-400">
+                              <span className="text-xs text-gray-500 dark:text-gray-400">
                                 {formatDate(offer.created_at)}
                               </span>
                             </div>
@@ -571,7 +571,7 @@ const ListOffers = () => {
                         </div>
                       </td>
                       
-                      {/* Description Column with View More */}
+                      {/* Description Column */}
                       <td className="px-6 py-4 max-w-[300px]">
                         {renderDescriptionPreview(offer.description)}
                       </td>
@@ -579,23 +579,23 @@ const ListOffers = () => {
                       {/* Price Column */}
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-1">
-                          <DollarSign size={14} className="text-gray-400" />
-                          <span className="font-semibold text-gray-800 dark:text-white">
+                          <DollarSign size={14} className="text-gray-400 dark:text-gray-500" />
+                          <span className="font-semibold text-gray-900 dark:text-white">
                             {parseFloat(offer.prix).toLocaleString()}
                           </span>
-                          <span className="text-xs text-gray-500">{offer.currency}</span>
+                          <span className="text-xs text-gray-500 dark:text-gray-400">{offer.currency}</span>
                         </div>
-                      </td>
+                       </td>
                       
                       {/* Status Column */}
                       <td className="px-6 py-4 hidden md:table-cell">
                         {renderStatusBadge(offer.status)}
-                      </td>
+                       </td>
                       
                       {/* Provider Column */}
                       <td className="px-6 py-4 hidden lg:table-cell">
                         {renderProviderBadge(offer.provider_type)}
-                      </td>
+                       </td>
                       
                       {/* Date Column */}
                       <td className="px-6 py-4 hidden xl:table-cell">
@@ -603,14 +603,14 @@ const ListOffers = () => {
                           <Calendar size={14} />
                           {formatDate(offer.created_at)}
                         </div>
-                      </td>
+                       </td>
                       
                       {/* Actions Column */}
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-1">
                           <Link
                             to={`/offer/${offer.id}`}
-                            className="p-1.5 rounded-lg text-gray-500 hover:text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition"
+                            className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-blue-600 hover:border-blue-300 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:text-blue-400 dark:hover:border-blue-700"
                             title="View details"
                           >
                             <Eye size={16} />
@@ -618,7 +618,7 @@ const ListOffers = () => {
                           {canUpdateOffer ? (
                             <Link
                               to={`/edit-offer/${offer.id}`}
-                              className="p-1.5 rounded-lg text-gray-500 hover:text-yellow-500 hover:bg-yellow-50 dark:hover:bg-yellow-900/20 transition"
+                              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-yellow-600 hover:border-yellow-300 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:text-yellow-400 dark:hover:border-yellow-700"
                               title="Edit offer"
                             >
                               <Edit size={16} />
@@ -630,7 +630,7 @@ const ListOffers = () => {
                                 setSelectedOffer(offer);
                                 setShowStatusModal(true);
                               }}
-                              className="p-1.5 rounded-lg text-gray-500 hover:text-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition"
+                              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-purple-600 hover:border-purple-300 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:text-purple-400 dark:hover:border-purple-700"
                               title="Change status"
                             >
                               <Clock size={16} />
@@ -642,14 +642,14 @@ const ListOffers = () => {
                                 setSelectedOffer(offer);
                                 setShowDeleteModal(true);
                               }}
-                              className="p-1.5 rounded-lg text-gray-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition"
+                              className="p-2 rounded-lg bg-white border border-gray-200 text-gray-600 hover:text-red-600 hover:border-red-300 transition-all dark:bg-gray-800 dark:border-gray-700 dark:text-gray-300 dark:hover:text-red-400 dark:hover:border-red-700"
                               title="Delete offer"
                             >
                               <Trash2 size={16} />
                             </button>
                           ) : null}
                         </div>
-                      </td>
+                       </td>
                     </tr>
                   ))}
                 </tbody>
