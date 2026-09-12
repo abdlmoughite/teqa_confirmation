@@ -57,6 +57,7 @@ export const ROUTE_PERMISSIONS = {
   dashboard: [PERMISSIONS.dashboardView, PERMISSIONS.dashboardViewOwn],
   offers: [PERMISSIONS.offersView, PERMISSIONS.offersMarketplace, PERMISSIONS.offersCreate],
   orders: [PERMISSIONS.ordersView, PERMISSIONS.ordersAssign, PERMISSIONS.ordersUpdateStatus],
+  dispatch: [PERMISSIONS.ordersAssign],
   collaborations: [
     PERMISSIONS.collaborationsView,
     PERMISSIONS.collaborationsViewOwn,

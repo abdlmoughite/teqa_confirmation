@@ -6,16 +6,12 @@ const Card = ({ children, className, bodyClassName, hover = false, ...props }) =
     initial={{ opacity: 0, y: 10 }}
     animate={{ opacity: 1, y: 0 }}
     exit={{ opacity: 0, y: -10 }}
-    whileHover={hover ? { y: -4 } : undefined}
-    transition={{ duration: 0.3 }}
-    className={clsx(
-      "overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm transition-all duration-200 dark:border-slate-800 dark:bg-slate-900 dark:shadow-slate-950/50",
-      hover && "hover:shadow-md",
-      className
-    )}
+    whileHover={hover ? { y: -3 } : undefined}
+    transition={{ duration: 0.25 }}
+    className={clsx("teqa-card", hover && "teqa-card--hover", className)}
     {...props}
   >
-    <div className={clsx("p-4 md:p-6", bodyClassName)}>{children}</div>
+    <div className={clsx("teqa-card__body", bodyClassName)}>{children}</div>
   </motion.div>
 );
 

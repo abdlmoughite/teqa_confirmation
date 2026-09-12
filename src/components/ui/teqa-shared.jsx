@@ -14,7 +14,7 @@ export const ICON_VARIANTS = {
   green:   { bg: "var(--teqa-green-dim)", color: "var(--teqa-green)"   },
   blue:    { bg: "var(--teqa-blue-dim)",  color: "var(--teqa-blue)"    },
   red:     { bg: "var(--teqa-red-dim)",   color: "var(--teqa-red)"     },
-  warning: { bg: "rgba(245,158,11,0.12)", color: "var(--teqa-warning)" },
+  warning: { bg: "rgba(217,119,6,0.12)", color: "var(--teqa-warning)" },
   neutral: { bg: "var(--teqa-surface3)",  color: "var(--teqa-muted)"   },
 };
 
@@ -266,8 +266,8 @@ export const TeqaPagination = ({ currentPage, totalPages, total, itemsPerPage, o
 ───────────────────────────────────────────────────────────── */
 
 export const InfoRow = ({ label, children, variant }) => {
-  const bg = variant === "green" ? "rgba(34,197,94,0.06)" : variant === "red" ? "rgba(239,68,68,0.06)" : variant === "warning" ? "rgba(245,158,11,0.06)" : "var(--teqa-surface2)";
-  const border = variant === "green" ? "0.5px solid rgba(34,197,94,0.2)" : variant === "red" ? "0.5px solid rgba(239,68,68,0.2)" : "0.5px solid var(--teqa-border)";
+  const bg = variant === "green" ? "rgba(37,99,235,0.06)" : variant === "red" ? "rgba(220,38,38,0.06)" : variant === "warning" ? "rgba(217,119,6,0.06)" : "var(--teqa-surface2)";
+  const border = variant === "green" ? "0.5px solid rgba(37,99,235,0.2)" : variant === "red" ? "0.5px solid rgba(220,38,38,0.2)" : "0.5px solid var(--teqa-border)";
   return (
     <div style={{ background: bg, border, borderRadius: 10, padding: "10px 14px" }}>
       <p className="text-label" style={{ marginBottom: 5 }}>{label}</p>
@@ -289,8 +289,8 @@ export const AttemptItem = ({ attempt, idx, currency, formatPrice, formatDate })
       transition={{ delay: idx * 0.04 }}
       style={{
         borderRadius: 10,
-        border: `0.5px solid ${ok ? "rgba(34,197,94,0.25)" : "rgba(239,68,68,0.25)"}`,
-        background: ok ? "rgba(34,197,94,0.05)" : "rgba(239,68,68,0.05)",
+        border: `0.5px solid ${ok ? "rgba(37,99,235,0.25)" : "rgba(220,38,38,0.25)"}`,
+        background: ok ? "rgba(37,99,235,0.05)" : "rgba(220,38,38,0.05)",
         padding: "12px 14px",
       }}
     >

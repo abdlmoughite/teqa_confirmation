@@ -16,6 +16,7 @@ import ListOffers from "../compnent/offers/indexOffers";
 import OfferDetails from "../compnent/offers/OfferDetails";
 import MyWallet from "../compnent/wallet/MyWallet";
 import Marketplace from "./Marketplace";
+import AgencyDispatchPage from "./AgencyDispatchPage";
 import OrdersPage from "./OrdersPage";
 import ProfilePage from "./ProfilePage";
 import SettingsPage from "./SettingsPage";
@@ -66,6 +67,7 @@ const AppConfirmation = () => {
         <Route path="/marketplace" element={<Protected anyOf={["offers.view_marketplace", "offers.view"]}><Marketplace /></Protected>} />
         <Route path="/offers" element={<Protected anyOf={ROUTE_PERMISSIONS.offers}><ListOffers /></Protected>} />
         <Route path="/orders" element={<Protected anyOf={ROUTE_PERMISSIONS.orders}><OrdersPage /></Protected>} />
+        <Route path="/dispatch" element={<Protected anyOf={ROUTE_PERMISSIONS.dispatch}><AgencyDispatchPage /></Protected>} />
         <Route path="/create-offer" element={<Protected anyOf={["offers.create"]}><CreateOffer /></Protected>} />
         <Route path="/edit-offer/:id" element={<Protected anyOf={["offers.update", "offers.update_own", "offers.update_agency"]}><EditOffer /></Protected>} />
         <Route path="/offer/:id" element={<Protected anyOf={ROUTE_PERMISSIONS.offers}><OfferDetails /></Protected>} />

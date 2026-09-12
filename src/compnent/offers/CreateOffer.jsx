@@ -1,7 +1,7 @@
 // CreateOffer.jsx - Version ultra compacte
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { AddOffer } from "../../api/auth";
+import { AddOffer, GetActiveCurrencies } from "../../api/auth";
 import {
   Tag,
   FileText,
@@ -63,6 +63,17 @@ const CreateOffer = () => {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [apiError, setApiError] = useState(null);
+  const [activeCurrencies, setActiveCurrencies] = useState(CURRENCIES);
+
+  useEffect(() => {
+    GetActiveCurrencies()
+      .then((res) => {
+        if (res.data?.length) {
+          setActiveCurrencies(res.data.map((c) => ({ value: c.code, symbol: c.symbol, label: `${c.code} - ${c.label}` })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -272,11 +283,15 @@ const CreateOffer = () => {
                     Currency
                   </label>
                   <select
+                    name="currency"
                     value={form.currency}
-                    disabled
-                    className="w-full px-3 py-1.5 text-xs rounded-lg border border-gray-300 dark:border-gray-700 bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    onChange={handleChange}
+                    disabled={activeCurrencies.length <= 1}
+                    className={`w-full px-3 py-1.5 text-xs rounded-lg border bg-white dark:bg-gray-800 text-gray-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-emerald-500 border-gray-300 dark:border-gray-700 ${activeCurrencies.length <= 1 ? "bg-gray-100 dark:bg-gray-800/50 text-gray-500 dark:text-gray-400 cursor-not-allowed" : ""}`}
                   >
-                    <option>MAD</option>
+                    {activeCurrencies.map((c) => (
+                      <option key={c.value} value={c.value}>{c.value}</option>
+                    ))}
                   </select>
                 </div>
               </div>

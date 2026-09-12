@@ -133,6 +133,10 @@ export const CreateWallet = (data) => MARKETPLACE_API.post("api/wallets/wallets/
 export const AddBalanceToWallet = (id, amount) =>
   MARKETPLACE_API.post(`api/wallets/wallets/${id}/add-balance/`, { amount });
 
+export const GetBankAccount = () => MARKETPLACE_API.get("api/wallets/bank-account/");
+export const UpdateBankAccount = (data) =>
+  MARKETPLACE_API.patch("api/wallets/bank-account/", data);
+
 export const GetTransfers = (params = {}) => {
   const queryParams = new URLSearchParams(params).toString();
   return MARKETPLACE_API.get(
@@ -237,7 +241,103 @@ export const GetDashboardStats = () =>
   MARKETPLACE_API.get("api/core/dashboard/stats/");
 export const GetMarketplaceCapabilities = () =>
   MARKETPLACE_API.get("api/core/me/capabilities/");
+export const GetActiveCurrencies = () =>
+  MARKETPLACE_API.get("api/core/currencies/active/");
 
+// ─── Badges ──────────────────────────────────────────────────────────────────
+export const GetBadges = (params = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return MARKETPLACE_API.get(`api/badges/badges/${q ? `?${q}` : ""}`);
+};
+export const GetProviderBadgeSummary = (provider_type, provider_id) =>
+  MARKETPLACE_API.get("api/badges/badges/provider-summary/", {
+    params: { provider_type, provider_id },
+  });
+export const AssignBadge = (data) => MARKETPLACE_API.post("api/badges/badges/assign/", data);
+export const RevokeBadge = (id) => MARKETPLACE_API.post(`api/badges/badges/${id}/revoke/`);
+
+// ─── KYC ─────────────────────────────────────────────────────────────────────
+export const GetMyKYCStatus = () => MARKETPLACE_API.get("api/kyc/my-status/");
+export const InitiateKYC = () => MARKETPLACE_API.post("api/kyc/initiate/");
+export const ApproveKYC = (id) => MARKETPLACE_API.post(`api/kyc/${id}/approve/`);
+export const RejectKYC = (id, data) => MARKETPLACE_API.post(`api/kyc/${id}/reject/`, data);
+export const GetAllKYCRecords = (params = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return MARKETPLACE_API.get(`api/kyc/${q ? `?${q}` : ""}`);
+};
+
+// ─── Collaboration termination ────────────────────────────────────────────────
+export const RequestCollaborationTermination = (id, data) =>
+  MARKETPLACE_API.post(`api/collaborations/collaborations/${id}/request-termination/`, data);
+export const ConfirmCollaborationTermination = (id) =>
+  MARKETPLACE_API.post(`api/collaborations/collaborations/${id}/confirm-termination/`);
+
+// ─── Withdrawal requests ─────────────────────────────────────────────────────
+export const GetWithdrawalRequests = (params = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return MARKETPLACE_API.get(`api/wallets/withdrawal-requests/${q ? `?${q}` : ""}`);
+};
+export const CreateWithdrawalRequest = (data) =>
+  MARKETPLACE_API.post("api/wallets/withdrawal-requests/", data);
+export const CancelWithdrawalRequest = (id) =>
+  MARKETPLACE_API.post(`api/wallets/withdrawal-requests/${id}/cancel/`);
+export const ApproveWithdrawalRequest = (id, data) =>
+  MARKETPLACE_API.post(`api/wallets/withdrawal-requests/${id}/approve/`, data);
+export const RejectWithdrawalRequest = (id, data) =>
+  MARKETPLACE_API.post(`api/wallets/withdrawal-requests/${id}/reject/`, data);
+export const MarkWithdrawalPaid = (id, data) =>
+  MARKETPLACE_API.post(`api/wallets/withdrawal-requests/${id}/mark-paid/`, data);
+
+// ─── Messaging with file support ─────────────────────────────────────────────
+export const SendConversationFile = (id, formData) =>
+  MARKETPLACE_API.post(`api/messaging/conversations/${id}/send-message/`, formData, {
+    headers: { "Content-Type": "multipart/form-data" },
+  });
+
+// ─── Marketplace with advanced filters ───────────────────────────────────────
+export const GetMarketplaceWithFilters = (params = {}) => {
+  const q = new URLSearchParams(params).toString();
+  return MARKETPLACE_API.get(`api/offers/public-marketplace/${q ? `?${q}` : ""}`);
+};
+
+// ─── Orders (integration_service) ────────────────────────────────────────────
+// Le provider (agence/agent) voit uniquement les commandes des boutiques
+// (source_connection_id) couvertes par ses collaborations actives.
+// 1) marketplace_service résout la liste des source_connection_id
+// 2) integration_service renvoie les commandes de ces sources
+// Voir context/tach_a_faire.txt PHASE 3.
+export const GetMySourceConnections = () =>
+  MARKETPLACE_API.get("api/collaborations/collaborations/my-source-connections/");
+
+export const GetOrdersBySources = (source_connection_ids) =>
+  INTEGRATION_API_.post("orders/orders/by-sources/", { source_connection_ids });
+
+export const GetOrdersByAssignmentRules = (assignment_rules) =>
+  INTEGRATION_API_.post("orders/orders/by-assignment-rules/", { assignment_rules });
+
+export const GetInternalAssignmentRules = () =>
+  INTEGRATION_API_.get("orders/orders/internal-assignment-rules/");
+
+export const SaveInternalAssignmentRule = (data) =>
+  INTEGRATION_API_.post("orders/orders/internal-assignment-rules/", data);
+
+export const GetInternalPerformance = () =>
+  INTEGRATION_API_.get("orders/orders/internal-performance/");
+
+export const FetchClientScore = (phone) =>
+  INTEGRATION_API_.post("orders/internal/client-scoring/", { phone });
+
+export const ConfirmOrder = (orderId, colab_id, source_connection_id) =>
+  INTEGRATION_API_.patch(`orders/orders/${orderId}/status/`, {
+    local_status: "confirmed",
+    colab_id,
+    source_connection_id,
+  });
+
+export const UpdateOrderShippingStatus = (orderId, shipping_status) =>
+  INTEGRATION_API_.patch(`orders/orders/${orderId}/status/`, { shipping_status });
+
+// ─── Dev token helpers ────────────────────────────────────────────────────────
 export const setDevToken = (token) => {
   localStorage.setItem("token", token);
 };

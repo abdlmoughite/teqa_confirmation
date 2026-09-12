@@ -1,6 +1,7 @@
 // CollaborationDetails.jsx
 import { useState, useEffect, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Handshake,
   ArrowLeft,
@@ -27,7 +28,18 @@ import {
   Info,
   Check,
   X,
-  Power
+  Power,
+  Zap,
+  Shield,
+  Star,
+  Phone,
+  Mail,
+  MapPin,
+  Globe,
+  Sparkles,
+  MinusCircle,
+  AlarmClock,
+  AlertTriangle,
 } from "lucide-react";
 import {
   ActivateCollaboration,
@@ -35,63 +47,326 @@ import {
   GetCollaboration,
   GetCollaborationThread,
   RespondToCollaboration,
+  RequestCollaborationTermination,
+  ConfirmCollaborationTermination,
 } from "../../api/auth";
 import { useToast } from "../../context/ToastContext";
 import { usePublicEntities } from "../../hooks/usePublicEntities";
 
 /* =========================================================
-   CONSTANTS
+   CONSTANTS - Status Colors (Élégantes et distinctes)
 ========================================================= */
 
-const STATUS_CONFIG = {
-  pending: { 
-    label: "Pending", 
-    color: "yellow", 
+const STATUS_STYLES = {
+  pending: {
+    label: "Pending",
     icon: Clock,
-    bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
-    textColor: "text-yellow-700 dark:text-yellow-400",
-    borderColor: "border-yellow-200 dark:border-yellow-800"
+    // Bordure latérale
+    borderColor: "border-l-orange-400",
+    // Badge
+    badgeBg: "bg-orange-50 text-orange-700 dark:bg-orange-500/10 dark:text-orange-400",
+    badgeBorder: "border-orange-200 dark:border-orange-500/20",
+    // Timeline dot
+    dotBg: "bg-orange-500",
+    dotBorder: "border-orange-200 dark:border-orange-500/30",
+    // Texte
+    textColor: "text-orange-700 dark:text-orange-400",
+    // Gradients
+    gradient: "from-orange-500/10 to-transparent",
+    iconColor: "text-orange-500",
+    // Background pour les messages
+    messageBg: "bg-orange-50 dark:bg-orange-500/10",
+    // Bouton gradient
+    buttonGradient: "from-orange-500 to-amber-500"
   },
-  active: { 
-    label: "Active", 
-    color: "green", 
+  active: {
+    label: "Active",
     icon: CheckCircle,
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    textColor: "text-green-700 dark:text-green-400",
-    borderColor: "border-green-200 dark:border-green-800"
+    borderColor: "border-l-teal-500",
+    badgeBg: "bg-teal-50 text-teal-700 dark:bg-teal-500/10 dark:text-teal-400",
+    badgeBorder: "border-teal-200 dark:border-teal-500/20",
+    dotBg: "bg-teal-500",
+    dotBorder: "border-teal-200 dark:border-teal-500/30",
+    textColor: "text-teal-700 dark:text-teal-400",
+    gradient: "from-teal-500/10 to-transparent",
+    iconColor: "text-teal-500",
+    messageBg: "bg-teal-50 dark:bg-teal-500/10",
+    buttonGradient: "from-teal-500 to-emerald-500"
   },
   inactive: {
     label: "Inactive",
-    color: "orange",
     icon: Power,
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    textColor: "text-orange-700 dark:text-orange-400",
-    borderColor: "border-orange-200 dark:border-orange-800"
-  },
-  rejected: { 
-    label: "Rejected", 
-    color: "red", 
-    icon: XCircle,
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    textColor: "text-red-700 dark:text-red-400",
-    borderColor: "border-red-200 dark:border-red-800"
-  },
-  countered: { 
-    label: "Countered", 
-    color: "purple", 
-    icon: TrendingUp,
-    bgColor: "bg-purple-100 dark:bg-purple-900/30",
-    textColor: "text-purple-700 dark:text-purple-400",
-    borderColor: "border-purple-200 dark:border-purple-800"
-  },
-  cancelled: { 
-    label: "Cancelled", 
-    color: "gray", 
-    icon: XCircle,
-    bgColor: "bg-gray-100 dark:bg-gray-800",
+    borderColor: "border-l-gray-400",
+    badgeBg: "bg-gray-100 text-gray-600 dark:bg-gray-800 dark:text-gray-400",
+    badgeBorder: "border-gray-200 dark:border-gray-700",
+    dotBg: "bg-gray-400",
+    dotBorder: "border-gray-200 dark:border-gray-700",
     textColor: "text-gray-600 dark:text-gray-400",
-    borderColor: "border-gray-200 dark:border-gray-700"
+    gradient: "from-gray-100/50 to-transparent",
+    iconColor: "text-gray-400",
+    messageBg: "bg-gray-50 dark:bg-gray-800/50",
+    buttonGradient: "from-gray-500 to-gray-600"
+  },
+  rejected: {
+    label: "Rejected",
+    icon: XCircle,
+    borderColor: "border-l-rose-500",
+    badgeBg: "bg-rose-50 text-rose-700 dark:bg-rose-500/10 dark:text-rose-400",
+    badgeBorder: "border-rose-200 dark:border-rose-500/20",
+    dotBg: "bg-rose-500",
+    dotBorder: "border-rose-200 dark:border-rose-500/30",
+    textColor: "text-rose-700 dark:text-rose-400",
+    gradient: "from-rose-500/10 to-transparent",
+    iconColor: "text-rose-500",
+    messageBg: "bg-rose-50 dark:bg-rose-500/10",
+    buttonGradient: "from-rose-500 to-red-500"
+  },
+  countered: {
+    label: "Countered",
+    icon: TrendingUp,
+    borderColor: "border-l-indigo-500",
+    badgeBg: "bg-indigo-50 text-indigo-700 dark:bg-indigo-500/10 dark:text-indigo-400",
+    badgeBorder: "border-indigo-200 dark:border-indigo-500/20",
+    dotBg: "bg-indigo-500",
+    dotBorder: "border-indigo-200 dark:border-indigo-500/30",
+    textColor: "text-indigo-700 dark:text-indigo-400",
+    gradient: "from-indigo-500/10 to-transparent",
+    iconColor: "text-indigo-500",
+    messageBg: "bg-indigo-50 dark:bg-indigo-500/10",
+    buttonGradient: "from-indigo-500 to-purple-500"
+  },
+  cancelled: {
+    label: "Cancelled",
+    icon: XCircle,
+    borderColor: "border-l-stone-400",
+    badgeBg: "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400",
+    badgeBorder: "border-stone-200 dark:border-stone-700",
+    dotBg: "bg-stone-400",
+    dotBorder: "border-stone-200 dark:border-stone-700",
+    textColor: "text-stone-600 dark:text-stone-400",
+    gradient: "from-stone-100/50 to-transparent",
+    iconColor: "text-stone-400",
+    messageBg: "bg-stone-50 dark:bg-stone-800/50",
+    buttonGradient: "from-stone-500 to-stone-600"
   }
+};
+
+const getStatusStyle = (status) => {
+  return STATUS_STYLES[status] || STATUS_STYLES.pending;
+};
+
+/* =========================================================
+   COMPONENTS
+========================================================= */
+
+const ProfileLine = ({ label, value, icon: Icon }) => {
+  if (!value) return null;
+  return (
+    <div className="flex justify-between gap-4 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+      <div className="flex items-center gap-2">
+        {Icon && <Icon size={14} className="text-gray-400" />}
+        <span className="text-sm text-gray-500">{label}</span>
+      </div>
+      <span className="text-right font-medium text-gray-800 dark:text-gray-100">{value}</span>
+    </div>
+  );
+};
+
+const PublicEntityProfileModal = ({ target, entity, fallbackName, onClose }) => {
+  if (!target) return null;
+
+  const profile = entity?.profile || {};
+  const user = entity?.user || {};
+  const displayName = entity?.display_name || fallbackName || "Profile";
+  const subtitle = entity?.subtitle || user.role?.replace("_", " ") || "Profile";
+  const avatar = entity?.avatar || user.avatar;
+  const unavailable = !entity;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md overflow-hidden rounded-2xl border border-gray-200 bg-white shadow-2xl dark:border-gray-800 dark:bg-gray-900"
+      >
+        <div className="relative">
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+          <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+            <div className="flex items-center gap-2">
+              <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+                <User size={16} className="text-indigo-600" />
+              </div>
+              <h3 className="font-semibold text-gray-900 dark:text-white">Profile Details</h3>
+            </div>
+            <button
+              type="button"
+              onClick={onClose}
+              className="rounded-lg p-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800 transition"
+            >
+              <X size={18} />
+            </button>
+          </div>
+          <div className="p-5">
+            <div className="flex items-center gap-4">
+              <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-indigo-500 to-purple-500 text-xl font-bold text-white shadow-md">
+                {avatar ? <img src={avatar} alt={displayName} className="h-full w-full object-cover" /> : displayName.charAt(0).toUpperCase()}
+              </div>
+              <div className="min-w-0">
+                <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">{displayName}</p>
+                <p className="truncate text-sm text-gray-500">{subtitle}</p>
+              </div>
+            </div>
+
+            {unavailable ? (
+              <div className="mt-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-700 dark:bg-amber-500/10 dark:text-amber-400">
+                Profile details are not available yet.
+              </div>
+            ) : (
+              <div className="mt-5 space-y-2 text-sm">
+                <ProfileLine label="Name" value={displayName} icon={User} />
+                <ProfileLine label="Role" value={user.role?.replace("_", " ")} icon={Shield} />
+                <ProfileLine label="Email" value={user.email} icon={Mail} />
+                <ProfileLine label="Phone" value={user.phone_number} icon={Phone} />
+                <ProfileLine label="City" value={user.city} icon={MapPin} />
+                <ProfileLine label="Country" value={user.country} icon={Globe} />
+                <ProfileLine label="Activity" value={profile.activity_sector || profile.industry || profile.skills} icon={Star} />
+                <ProfileLine label="Status" value={profile.availability_status || (profile.is_verified_agency ? "Verified" : null)} icon={CheckCircle} />
+                <ProfileLine label="Website" value={profile.website || profile.portfolio_url} icon={Globe} />
+              </div>
+            )}
+          </div>
+          <div className="border-t border-gray-200 p-4 dark:border-gray-800">
+            <button
+              onClick={onClose}
+              className="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 px-4 py-2 text-white font-medium shadow-sm hover:shadow-md transition-all"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
+};
+
+/* =========================================================
+   TERMINATION MODAL
+========================================================= */
+
+const TERMINATION_REASONS = [
+  { value: "voluntary_exit",      label: "Voluntary Exit" },
+  { value: "breach_of_contract",  label: "Breach of Contract" },
+  { value: "mutual_agreement",    label: "Mutual Agreement" },
+  { value: "poor_performance",    label: "Poor Performance" },
+  { value: "other",               label: "Other" },
+];
+
+const TerminationModal = ({ onClose, onConfirm, loading }) => {
+  const [reason, setReason] = useState("");
+  const [note, setNote] = useState("");
+  const [err, setErr] = useState("");
+
+  const handleSubmit = () => {
+    if (!reason) { setErr("Please select a reason"); return; }
+    setErr("");
+    onConfirm({ reason, note: note.trim() });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <motion.div
+        initial={{ opacity: 0, scale: 0.95, y: -20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.95, y: -20 }}
+        onClick={(e) => e.stopPropagation()}
+        className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
+      >
+        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-rose-500 to-red-500" />
+        <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+          <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-500/10">
+            <AlertTriangle size={20} className="text-rose-600" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Request Termination</h3>
+            <p className="text-xs text-gray-500">A 48h notice period will apply</p>
+          </div>
+          <button onClick={onClose} className="ml-auto p-1 rounded-lg text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800">
+            <X size={16} />
+          </button>
+        </div>
+
+        <div className="p-5 space-y-4">
+          <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3">
+            <p className="text-xs text-amber-700 dark:text-amber-400 flex items-center gap-2">
+              <AlarmClock size={13} />
+              Termination will be scheduled 48 hours from now. A penalty may apply per contract terms.
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Reason <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={reason}
+              onChange={(e) => { setReason(e.target.value); setErr(""); }}
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all"
+            >
+              <option value="">Select a reason…</option>
+              {TERMINATION_REASONS.map((r) => (
+                <option key={r.value} value={r.value}>{r.label}</option>
+              ))}
+            </select>
+            {err && <p className="text-xs text-red-500 mt-1">{err}</p>}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+              Additional note <span className="text-gray-400">(optional)</span>
+            </label>
+            <textarea
+              rows={3}
+              value={note}
+              onChange={(e) => setNote(e.target.value)}
+              placeholder="Provide more context…"
+              className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-rose-500 transition-all"
+            />
+          </div>
+
+          <div className="flex gap-3 pt-2">
+            <button
+              onClick={onClose}
+              className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-rose-500 to-red-600 text-white font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            >
+              {loading ? <Loader2 size={16} className="animate-spin" /> : <AlertTriangle size={16} />}
+              Request Termination
+            </button>
+          </div>
+        </div>
+      </motion.div>
+    </motion.div>
+  );
 };
 
 /* =========================================================
@@ -102,7 +377,7 @@ const CollaborationDetails = () => {
   const toast = useToast();
   const { id } = useParams();
   const navigate = useNavigate();
-  
+
   const [collaboration, setCollaboration] = useState(null);
   const [allThreadCollabs, setAllThreadCollabs] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -115,6 +390,8 @@ const CollaborationDetails = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [actionableCollabId, setActionableCollabId] = useState(null);
   const [profileTarget, setProfileTarget] = useState(null);
+  const [showTerminationModal, setShowTerminationModal] = useState(false);
+  const [terminationLoading, setTerminationLoading] = useState(false);
 
   const publicEntityRefs = useMemo(() => {
     const refs = [];
@@ -145,9 +422,8 @@ const CollaborationDetails = () => {
   const fetchCollaboration = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
-      // Get current collaboration
       const response = await GetCollaboration(id);
       let collabData = response.data || response;
       collabData = {
@@ -155,26 +431,24 @@ const CollaborationDetails = () => {
         offer: collabData.offer_details || collabData.offer,
       };
       setCollaboration(collabData);
-      
-      // Set initial counter price from offer
+
       if (collabData.offer?.prix) {
         setCounterPrice(collabData.offer.prix.toString());
       }
-      
+
       const threadResponse = await GetCollaborationThread(collabData.id).catch(() => ({ data: null }));
       const threadItems = threadResponse.data?.items || [collabData];
       const threadCollabs = threadItems.map((threadItem) => ({
         ...threadItem,
         offer: threadItem.offer_details || threadItem.offer,
       }));
-      
-      // Sort by date (oldest first for timeline)
+
       threadCollabs.sort((a, b) => {
         const dateA = new Date(a.created_at);
         const dateB = new Date(b.created_at);
         return dateA - dateB;
       });
-      
+
       setAllThreadCollabs(threadCollabs);
 
       const latestPending = [...threadCollabs].reverse().find((item) => item.status === "pending");
@@ -185,7 +459,7 @@ const CollaborationDetails = () => {
       } else {
         setActionableCollabId(null);
       }
-      
+
     } catch (err) {
       if (process.env.NODE_ENV !== "production") console.warn("Error fetching collaboration:", err);
       setError(err.response?.data?.detail || err.message || "Failed to load collaboration");
@@ -216,7 +490,7 @@ const CollaborationDetails = () => {
 
     setActionLoading(true);
     setError(null);
-    
+
     try {
       const payload = { action };
       if (action === "counter") {
@@ -233,10 +507,10 @@ const CollaborationDetails = () => {
         payload.price_finale = parseFloat(priceFinale);
         payload.message = message.trim();
       }
-      
+
       await RespondToCollaboration(targetCollabId, payload);
       await fetchCollaboration();
-      
+
       if (action === "counter") {
         setShowCounterModal(false);
         setCounterMessage("");
@@ -294,6 +568,22 @@ const CollaborationDetails = () => {
     }
   };
 
+  const handleRequestTermination = async ({ reason, note }) => {
+    if (!collaboration?.id) return;
+    setTerminationLoading(true);
+    try {
+      await RequestCollaborationTermination(collaboration.id, { reason, note });
+      setShowTerminationModal(false);
+      await fetchCollaboration();
+      toast.success("Termination request submitted. Scheduled in 48 hours.", "Termination scheduled");
+    } catch (err) {
+      const msg = err.response?.data?.detail || "Failed to request termination";
+      toast.error(msg, "Termination failed");
+    } finally {
+      setTerminationLoading(false);
+    }
+  };
+
   /* =========================================================
      UTILITIES
   ========================================================= */
@@ -324,11 +614,11 @@ const CollaborationDetails = () => {
       const date = new Date(dateString);
       const now = new Date();
       const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) return "Today";
       if (diffDays === 1) return "Yesterday";
       if (diffDays < 7) return `${diffDays} days ago`;
-      
+
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
@@ -345,15 +635,15 @@ const CollaborationDetails = () => {
   };
 
   const renderStatusBadge = (status, size = "sm") => {
-    const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
-    const Icon = config.icon;
+    const style = getStatusStyle(status);
+    const Icon = style.icon;
     const padding = size === "sm" ? "px-2.5 py-1" : "px-3 py-1.5";
     const textSize = size === "sm" ? "text-xs" : "text-sm";
-    
+
     return (
-      <span className={`inline-flex items-center gap-1.5 ${padding} rounded-full ${textSize} font-medium ${config.bgColor} ${config.textColor}`}>
-        <Icon size={size === "sm" ? 12 : 14} />
-        {config.label}
+      <span className={`inline-flex items-center gap-1.5 ${padding} rounded-full ${textSize} font-medium border ${style.badgeBg} ${style.badgeBorder}`}>
+        <Icon size={size === "sm" ? 12 : 14} className={style.iconColor} />
+        {style.label}
       </span>
     );
   };
@@ -377,9 +667,9 @@ const CollaborationDetails = () => {
       subtitle: getEntitySubtitle(collab.provider_type, collab.provider_id, "Provider"),
       avatar: getEntityAvatar(collab.provider_type, collab.provider_id),
       icon: User,
-      color: "green",
-      bgColor: "bg-green-50 dark:bg-green-900/20",
-      textColor: "text-green-700 dark:text-green-300",
+      color: "emerald",
+      bgColor: "bg-emerald-50 dark:bg-emerald-900/20",
+      textColor: "text-emerald-700 dark:text-emerald-300",
     };
   };
 
@@ -387,7 +677,7 @@ const CollaborationDetails = () => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900">
         <div className="text-center">
-          <Loader2 size={48} className="animate-spin text-blue-500 mx-auto mb-4" />
+          <Loader2 size={48} className="animate-spin text-indigo-500 mx-auto mb-4" />
           <p className="text-gray-500 dark:text-gray-400">Loading collaboration...</p>
         </div>
       </div>
@@ -398,12 +688,12 @@ const CollaborationDetails = () => {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 p-6">
         <div className="max-w-4xl mx-auto">
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-8 text-center">
-            <AlertCircle size={48} className="text-red-500 mx-auto mb-4" />
-            <h2 className="text-xl font-semibold text-red-800 dark:text-red-300 mb-2">Error</h2>
-            <p className="text-red-700 dark:text-red-400 mb-4">{error || "Collaboration not found"}</p>
+          <div className="bg-rose-50 dark:bg-rose-900/20 border border-rose-200 dark:border-rose-800 rounded-xl p-8 text-center">
+            <AlertCircle size={48} className="text-rose-500 mx-auto mb-4" />
+            <h2 className="text-xl font-semibold text-rose-800 dark:text-rose-300 mb-2">Error</h2>
+            <p className="text-rose-700 dark:text-rose-400 mb-4">{error || "Collaboration not found"}</p>
             <div className="flex gap-3 justify-center">
-              <button onClick={fetchCollaboration} className="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg transition">
+              <button onClick={fetchCollaboration} className="px-4 py-2 bg-gradient-to-r from-rose-500 to-red-500 text-white rounded-lg transition shadow-sm">
                 Try Again
               </button>
               <Link to="/collaborations" className="px-4 py-2 bg-gray-500 hover:bg-gray-600 text-white rounded-lg transition">
@@ -425,68 +715,156 @@ const CollaborationDetails = () => {
   const storeAvatar = getEntityAvatar("STORE", collaboration.store_id);
   const providerName = getEntityName(collaboration.provider_type, collaboration.provider_id, "Provider");
   const providerSubtitle = getEntitySubtitle(collaboration.provider_type, collaboration.provider_id, collaboration.provider_type?.replace("_", " "));
+  const providerAvatar = getEntityAvatar(collaboration.provider_type, collaboration.provider_id);
   const deactivatedByName = getEntityName(
     collaboration.deactivated_by_role,
     collaboration.deactivated_by_owner_id,
     collaboration.deactivated_by_role
   );
+  const statusStyle = getStatusStyle(collaboration.status);
 
   return (
-    <div className="page-shell px-1 py-2">
-      {/* Header */}
-      <div className="page-header-card sticky top-0 z-10">
-        <div className="px-1 py-1">
-          <div className="flex items-center justify-between flex-wrap gap-4">
-            <div className="flex items-center gap-4">
-              <Link to="/collaborations" className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-                <ArrowLeft size={20} className="text-white dark:text-black" />
-              </Link>
-              <div>
-                <div className="flex items-center gap-3 flex-wrap">
-                  <h1 className="text-xl font-bold text-gray-800 dark:text-white">
-                    {collaboration.offer?.titre || "Collaboration"}
-                  </h1>
-                  {renderStatusBadge(collaboration.status, "md")}
-                </div>
-                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                  Store: {storeName} - Provider: {providerName}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={fetchCollaboration}
-              className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 py-6 px-4">
+      <AnimatePresence>
+        {showCounterModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4"
+            onClick={() => setShowCounterModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -20 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white dark:bg-gray-900 rounded-2xl max-w-md w-full shadow-2xl overflow-hidden"
             >
-              <RefreshCw size={18} />
-            </button>
-          </div>
-        </div>
-      </div>
+              <div className="relative">
+                <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                <div className="p-5 border-b border-gray-200 dark:border-gray-800 flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+                    <TrendingUp size={20} className="text-indigo-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Make Counter Offer</h3>
+                    <p className="text-xs text-gray-500">Propose a different price</p>
+                  </div>
+                </div>
 
-      <div className="px-1 py-2">
+                <div className="p-5 space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Your Price <span className="text-red-500">*</span>
+                    </label>
+                    <div className="relative">
+                      <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
+                      <input
+                        type="number"
+                        step="0.01"
+                        value={counterPrice}
+                        onChange={(e) => { setCounterPrice(e.target.value); setCounterError(""); }}
+                        className="w-full pl-9 pr-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                        placeholder="Enter your price"
+                      />
+                    </div>
+                    {counterError && <p className="text-xs text-red-500 mt-1.5">{counterError}</p>}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1.5">
+                      Message <span className="text-red-500">*</span>
+                    </label>
+                    <textarea
+                      rows={3}
+                      value={counterMessage}
+                      onChange={(e) => setCounterMessage(e.target.value)}
+                      className="w-full px-4 py-2.5 rounded-xl border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 text-gray-800 dark:text-white resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+                      placeholder="Explain your counter offer..."
+                    />
+                  </div>
+
+                  <div className="flex gap-3 pt-4">
+                    <button
+                      onClick={() => setShowCounterModal(false)}
+                      className="flex-1 px-4 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all font-medium"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      onClick={() => handleResponse("counter", counterPrice, counterMessage)}
+                      disabled={actionLoading}
+                      className="flex-1 px-4 py-2.5 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-medium shadow-md hover:shadow-lg transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+                      Send Counter
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
+          <div className="flex items-center gap-4">
+            <Link
+              to="/collaborations"
+              className="p-2 rounded-xl hover:bg-gray-100 dark:hover:bg-gray-800 transition-all"
+            >
+              <ArrowLeft size={20} className="text-gray-600 dark:text-gray-400" />
+            </Link>
+            <div>
+              <div className="flex items-center gap-3 flex-wrap">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+                  {collaboration.offer?.titre || "Collaboration"}
+                </h1>
+                {renderStatusBadge(collaboration.status, "md")}
+              </div>
+              <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                Store: {storeName} • Provider: {providerName}
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={fetchCollaboration}
+            className="p-2.5 rounded-xl border border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition-all"
+          >
+            <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+          </button>
+        </motion.div>
+
         {/* Tabs */}
-        <div className="flex gap-1 mb-6 border-b border-gray-200 dark:border-gray-800">
+        <div className="flex gap-1 mb-6 bg-gray-100 dark:bg-gray-800 p-1 rounded-xl w-fit">
           <button
             onClick={() => setActiveTab("details")}
-            className={`px-4 py-2 text-sm font-medium transition border-b-2 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
               activeTab === "details"
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800"
             }`}
           >
-            <Package size={14} className="inline mr-1" />
+            <Package size={14} />
             Offer Details
           </button>
           <button
             onClick={() => setActiveTab("history")}
-            className={`px-4 py-2 text-sm font-medium transition border-b-2 ${
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-all flex items-center gap-2 ${
               activeTab === "history"
-                ? 'border-blue-500 text-blue-600 dark:text-blue-400'
-                : 'border-transparent text-gray-500 hover:text-gray-700 dark:hover:text-gray-300'
+                ? "bg-white dark:bg-gray-900 text-indigo-600 dark:text-indigo-400 shadow-sm"
+                : "text-gray-600 dark:text-gray-400 hover:text-gray-800"
             }`}
           >
-            <History size={14} className="inline mr-1" />
-            Complete History ({allThreadCollabs.length})
+            <History size={14} />
+            History ({allThreadCollabs.length})
           </button>
         </div>
 
@@ -496,14 +874,12 @@ const CollaborationDetails = () => {
             {activeTab === "details" && (
               <>
                 {/* Current Collaboration Card */}
-                <div className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm border overflow-hidden ${
-                  needsAction ? 'border-l-4 border-l-yellow-500' : 'border-gray-200 dark:border-gray-800'
-                }`}>
-                  <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+                <div className={`bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-l-4 ${statusStyle.borderColor} border-gray-200 dark:border-gray-800 overflow-hidden transition-all duration-300`}>
+                  <div className="p-5 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
                     <div className="flex items-center justify-between flex-wrap gap-2">
                       <div className="flex items-center gap-2">
                         <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${currentSender.bgColor}`}>
-                          <currentSender.icon size={16} className={`text-${currentSender.color}-600`} />
+                          <currentSender.icon size={16} className={`text-white`} />
                         </div>
                         <span className={`text-sm font-medium ${currentSender.textColor}`}>
                           {currentSender.label} • {collaboration.kind === "initial" ? "Initial Request" : "Counter Offer"}
@@ -512,65 +888,61 @@ const CollaborationDetails = () => {
                       {renderStatusBadge(collaboration.status)}
                     </div>
                   </div>
-                  
+
                   <div className="p-5 space-y-4">
-                    {/* Message */}
                     {collaboration.message && (
-                      <div className={`p-3 rounded-lg ${currentSender.bgColor}`}>
-                        <p className={`text-sm italic ${currentSender.textColor}`}>
+                      <div className={`p-3 rounded-xl ${statusStyle.messageBg}`}>
+                        <p className={`text-sm italic ${statusStyle.textColor}`}>
                           "{collaboration.message}"
                         </p>
                       </div>
                     )}
-                    
-                    {/* Price */}
+
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-gray-500">Proposed Price</span>
                       <div className="flex items-center gap-1">
                         <DollarSign size={16} className="text-gray-400" />
-                        <span className="text-xl font-bold text-blue-600 dark:text-blue-400">
+                        <span className="text-2xl font-bold text-indigo-600 dark:text-indigo-400">
                           {formatPrice(collaboration.price_finale, collaboration.currency)}
                         </span>
                       </div>
                     </div>
-                    
-                    {/* Acceptance Status */}
+
                     <div className="grid grid-cols-2 gap-3 pt-2">
-                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                         <span className="text-xs text-gray-500">Store</span>
                         <div className="flex items-center gap-1">
                           {collaboration.accepted_by_store ? (
                             <>
-                              <CheckCircle size={14} className="text-green-500" />
-                              <span className="text-xs text-green-600">Accepted</span>
+                              <CheckCircle size={14} className="text-teal-500" />
+                              <span className="text-xs text-teal-600">Accepted</span>
                             </>
                           ) : (
                             <>
-                              <Clock size={14} className="text-yellow-500" />
-                              <span className="text-xs text-yellow-600">Pending</span>
+                              <Clock size={14} className="text-orange-500" />
+                              <span className="text-xs text-orange-600">Pending</span>
                             </>
                           )}
                         </div>
                       </div>
-                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                      <div className="flex items-center justify-between p-2 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                         <span className="text-xs text-gray-500">You</span>
                         <div className="flex items-center gap-1">
                           {collaboration.accepted_by_provider ? (
                             <>
-                              <CheckCircle size={14} className="text-green-500" />
-                              <span className="text-xs text-green-600">Accepted</span>
+                              <CheckCircle size={14} className="text-teal-500" />
+                              <span className="text-xs text-teal-600">Accepted</span>
                             </>
                           ) : (
                             <>
-                              <Clock size={14} className="text-yellow-500" />
-                              <span className="text-xs text-yellow-600">Pending</span>
+                              <Clock size={14} className="text-orange-500" />
+                              <span className="text-xs text-orange-600">Pending</span>
                             </>
                           )}
                         </div>
                       </div>
                     </div>
-                    
-                    {/* Dates */}
+
                     <div className="pt-2 text-xs text-gray-400 border-t border-gray-100 dark:border-gray-800">
                       <div className="flex justify-between">
                         <span>Created: {formatDate(collaboration.created_at)}</span>
@@ -584,15 +956,17 @@ const CollaborationDetails = () => {
 
                 {/* Offer Card */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                  <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+                  <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
                     <div className="flex items-center gap-2">
-                      <Package size={18} className="text-blue-500" />
+                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+                        <Package size={18} className="text-indigo-600" />
+                      </div>
                       <h2 className="font-semibold text-gray-800 dark:text-white">Related Offer</h2>
                     </div>
                   </div>
                   <div className="p-5">
-                    <h3 className="font-bold text-gray-800 dark:text-white">{collaboration.offer?.titre}</h3>
-                    <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-lg">
+                    <h3 className="font-bold text-gray-800 dark:text-white text-lg">{collaboration.offer?.titre}</h3>
+                    <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl">
                       <p className="text-sm text-gray-600 dark:text-gray-400">
                         {collaboration.offer?.description || "No description"}
                       </p>
@@ -606,31 +980,33 @@ const CollaborationDetails = () => {
 
                 {/* Store Info */}
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                  <div className="p-5 border-b border-gray-200 dark:border-gray-800">
+                  <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
                     <div className="flex items-center gap-2">
-                      <Building2 size={18} className="text-blue-500" />
+                      <div className="p-1.5 rounded-lg bg-gradient-to-br from-blue-500/10 to-cyan-500/10">
+                        <Building2 size={18} className="text-white-600" />
+                      </div>
                       <h2 className="font-semibold text-gray-800 dark:text-white">Store Information</h2>
                     </div>
                   </div>
                   <div className="p-5">
-                    <div className="flex items-center gap-3 rounded-lg bg-gray-50 p-3 dark:bg-gray-800/50">
-                      <div className="grid h-11 w-11 place-items-center overflow-hidden rounded-lg bg-blue-100 text-sm font-semibold text-blue-700">
+                    <div className="flex items-center gap-3 rounded-xl bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/50 dark:to-gray-900 p-3">
+                      <div className="grid h-12 w-12 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 text-lg font-bold text-white shadow-md">
                         {storeAvatar ? (
                           <img src={storeAvatar} alt={storeName} className="h-full w-full object-cover" />
                         ) : (
-                          storeName?.charAt(0) || "S"
+                          storeName?.charAt(0).toUpperCase() || "S"
                         )}
                       </div>
-                      <div className="min-w-0">
-                        <p className="truncate text-sm font-semibold text-gray-900 dark:text-white">{storeName}</p>
+                      <div className="min-w-0 flex-1">
+                        <p className="truncate font-semibold text-gray-900 dark:text-white">{storeName}</p>
                         <p className="truncate text-xs text-gray-500">{storeSubtitle}</p>
                       </div>
                       <button
                         type="button"
                         onClick={() => setProfileTarget({ type: "STORE", id: collaboration.store_id })}
-                        className="ml-auto rounded-lg bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100"
+                        className="rounded-xl bg-blue-50 px-3 py-1.5 text-xs font-medium text-blue-700 hover:bg-blue-100 dark:bg-blue-500/20 dark:text-blue-400 transition"
                       >
-                        View
+                        View Profile
                       </button>
                     </div>
                   </div>
@@ -640,14 +1016,16 @@ const CollaborationDetails = () => {
 
             {activeTab === "history" && (
               <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="card-header">
+                <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
                   <div className="flex items-center gap-2">
-                    <History size={18} className="text-primary-600 dark:text-primary-400" />
-                    <h2 className="font-semibold text-app-strong">Historique complet COD</h2>
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10">
+                      <History size={18} className="text-purple-600" />
+                    </div>
+                    <h2 className="font-semibold text-gray-800 dark:text-white">Complete History</h2>
                     <span className="text-xs text-gray-400">(Parent → Last)</span>
                   </div>
                 </div>
-                
+
                 <div className="p-5">
                   {allThreadCollabs.length === 0 ? (
                     <div className="text-center py-8 text-gray-500">
@@ -655,44 +1033,53 @@ const CollaborationDetails = () => {
                       <p>No history available</p>
                     </div>
                   ) : (
-                    <div className="space-y-4">
+                    <div className="relative">
+                      {/* Timeline line */}
+                      <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+
                       <div className="space-y-4">
                         {allThreadCollabs.map((collab, idx) => {
                           const isLast = idx === allThreadCollabs.length - 1;
-                          const isFirst = idx === 0;
-                          const sender = getSenderInfo(collab);
+                          const isStoreMessage = collab.created_by_role === "STORE";
                           const isInitial = collab.kind === "initial";
-                          const isCounter = collab.kind === "counter";
+                          const sender = getSenderInfo(collab);
+                          const itemStyle = getStatusStyle(collab.status);
                           const isCurrent = collab.id === collaboration.id;
                           const initials = (sender.label || collab.created_by_role || "C").slice(0, 2).toUpperCase();
-                          
+
                           return (
-                            <div key={collab.id} className={`collab-timeline-item ${isCurrent ? "current" : ""}`}>
+                            <div key={collab.id} className="relative flex gap-3">
                               {/* Timeline dot */}
-                              <div className="profile-avatar-initials !h-9 !w-9 !overflow-hidden !rounded-full !text-xs">
+                              <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 ${itemStyle.dotBorder} bg-white dark:bg-gray-900 shadow-md`}>
                                 {sender.avatar ? (
-                                  <img src={sender.avatar} alt={sender.label} className="h-full w-full object-cover" />
+                                  <img src={sender.avatar} alt={sender.label} className="h-full w-full rounded-full object-cover" />
                                 ) : (
-                                  initials
+                                  <span className="text-xs font-bold">{initials}</span>
                                 )}
                               </div>
-                              
+
                               {/* Content */}
-                              <div className="flex-1 rounded-[var(--radius-lg)] border border-app bg-app-surface p-4 shadow-card">
+                              <div className={`flex-1 p-4 rounded-xl border-l-4 ${itemStyle.borderColor} ${
+                                isLast
+                                  ? 'bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900 border border-gray-200 dark:border-gray-700 shadow-md'
+                                  : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                              }`}>
                                 <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
                                   <div className="flex items-center gap-2 flex-wrap">
                                     <span className="text-xs font-medium text-gray-500">
-                                      {isInitial ? '📋 Initial Request' : isCounter ? `🔄 Counter Offer #${idx}` : `📝 Update #${idx}`}
+                                      {isInitial ? '📋 Initial Request' : `🔄 Counter Offer #${idx}`}
                                     </span>
-                                    <span className="badge badge-primary">{isFirst ? `Root parent: ${sender.label}` : sender.label}</span>
+                                    <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                                      {sender.label}
+                                    </span>
                                     {renderStatusBadge(collab.status, "sm")}
-                                    {isCurrent ? <span className="badge badge-info">Actuelle</span> : null}
+                                    {isCurrent && <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-0.5 rounded-full">Current</span>}
                                   </div>
                                   <span className="text-xs text-gray-400" title={formatDate(collab.created_at)}>
                                     {formatShortDate(collab.created_at)}
                                   </span>
                                 </div>
-                                
+
                                 <div className="flex items-center gap-3 text-sm mb-2">
                                   <div className="flex items-center gap-1">
                                     <DollarSign size={12} className="text-gray-400" />
@@ -701,34 +1088,32 @@ const CollaborationDetails = () => {
                                     </span>
                                   </div>
                                   {collab.accepted_by_store && (
-                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <span className="text-xs text-teal-600 flex items-center gap-1">
                                       <Check size={10} /> Store accepted
                                     </span>
                                   )}
                                   {collab.accepted_by_provider && (
-                                    <span className="text-xs text-green-600 flex items-center gap-1">
+                                    <span className="text-xs text-teal-600 flex items-center gap-1">
                                       <Check size={10} /> You accepted
                                     </span>
                                   )}
                                 </div>
-                                
+
                                 {collab.message && (
-                                  <div className={`p-2 rounded-lg text-sm ${sender.bgColor}`}>
-                                    <p className={`italic ${sender.textColor}`}>"{collab.message}"</p>
+                                  <div className={`p-2 rounded-lg text-sm ${itemStyle.messageBg}`}>
+                                    <p className={`italic ${itemStyle.textColor}`}>"{collab.message}"</p>
                                   </div>
                                 )}
-                                
-                                {/* Assignment sources */}
+
                                 {collab.assignement_source && (
                                   <div className="mt-2 flex items-center gap-1 text-xs text-gray-400">
                                     <FileText size={10} />
                                     <span>Sources: {collab.assignement_source}</span>
                                   </div>
                                 )}
-                                
-                                {/* Arrow indicator for flow */}
+
                                 {!isLast && (
-                                  <div className="mt-2 flex justify-center">
+                                  <div className="mt-3 flex justify-center">
                                     <ArrowRight size={14} className="text-gray-300" />
                                   </div>
                                 )}
@@ -739,26 +1124,17 @@ const CollaborationDetails = () => {
                       </div>
                     </div>
                   )}
-                  
+
                   {/* Current Status Summary */}
                   <div className="mt-6 pt-4 text-center border-t border-gray-200 dark:border-gray-700">
-                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-                      collaboration.status === "active" 
-                        ? 'bg-green-100 dark:bg-green-900/30 text-green-700' 
-                        : collaboration.status === "inactive"
-                        ? 'bg-orange-100 dark:bg-orange-900/30 text-orange-700'
-                        : collaboration.status === "pending" 
-                        ? 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700'
-                        : collaboration.status === "countered"
-                        ? 'bg-purple-100 dark:bg-purple-900/30 text-purple-700'
-                        : 'bg-gray-100 dark:bg-gray-800 text-gray-600'
-                    }`}>
-                      <Info size={14} />
+                    <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${statusStyle.badgeBg} ${statusStyle.badgeBorder} shadow-sm`}>
+                      <Info size={14} className={statusStyle.iconColor} />
                       <span className="text-sm font-medium">
-                        Current Status: {collaboration.status === "active" ? "✓ Active Collaboration" : 
-                          collaboration.status === "pending" ? "⏳ Awaiting Response" : 
-                          collaboration.status === "countered" ? "🔄 Counter Offer Sent" : 
-                          collaboration.status === "rejected" ? "✗ Rejected" : collaboration.status}
+                        Current Status: {collaboration.status === "active" ? "✓ Active Collaboration" :
+                          collaboration.status === "pending" ? "⏳ Awaiting Response" :
+                          collaboration.status === "countered" ? "🔄 Counter Offer Sent" :
+                          collaboration.status === "rejected" ? "✗ Rejected" :
+                          collaboration.status === "inactive" ? "⭘ Inactive" : collaboration.status}
                       </span>
                     </div>
                   </div>
@@ -770,7 +1146,7 @@ const CollaborationDetails = () => {
           {/* Sidebar - Actions & Info */}
           <div className="space-y-6">
             {/* Current Offer Card */}
-            <div className="bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl shadow-lg overflow-hidden">
+            <div className="bg-gradient-to-r from-indigo-600 to-purple-600 rounded-2xl shadow-lg overflow-hidden">
               <div className="p-5">
                 <p className="text-white/80 text-sm mb-1">Current Offer</p>
                 <p className="text-3xl font-bold text-white">
@@ -784,8 +1160,8 @@ const CollaborationDetails = () => {
 
             {/* Action Buttons */}
             {needsAction && (
-              <div className="card">
-                <div className="card-body">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div className="p-5">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                     <Reply size={16} />
                     Respond to Request
@@ -794,7 +1170,7 @@ const CollaborationDetails = () => {
                     <button
                       onClick={() => handleResponse("accept")}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500 hover:bg-green-600 text-white rounded-lg transition disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-teal-500 to-emerald-500 hover:from-teal-600 hover:to-emerald-600 text-white rounded-xl transition-all font-medium shadow-sm"
                     >
                       <CheckCircle size={16} />
                       Accept Collaboration
@@ -802,7 +1178,7 @@ const CollaborationDetails = () => {
                     <button
                       onClick={() => setShowCounterModal(true)}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-indigo-500 to-purple-500 hover:from-indigo-600 hover:to-purple-600 text-white rounded-xl transition-all font-medium shadow-sm"
                     >
                       <TrendingUp size={16} />
                       Make Counter Offer
@@ -810,7 +1186,7 @@ const CollaborationDetails = () => {
                     <button
                       onClick={() => handleResponse("reject")}
                       disabled={actionLoading}
-                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-lg transition disabled:opacity-50"
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-rose-500 to-red-500 hover:from-rose-600 hover:to-red-600 text-white rounded-xl transition-all font-medium shadow-sm"
                     >
                       <XCircle size={16} />
                       Decline Request
@@ -821,83 +1197,108 @@ const CollaborationDetails = () => {
             )}
 
             {!needsAction && collaboration.status === "pending" && hasActiveInThread && (
-              <div className="bg-amber-50 dark:bg-amber-900/20 rounded-xl shadow-sm border border-amber-200 dark:border-amber-800 overflow-hidden">
+              <div className="bg-orange-50 dark:bg-orange-500/10 rounded-2xl shadow-sm border border-orange-200 dark:border-orange-500/20 overflow-hidden">
                 <div className="p-5">
-                  <h3 className="font-semibold text-amber-800 dark:text-amber-300 mb-2 flex items-center gap-2">
+                  <h3 className="font-semibold text-orange-800 dark:text-orange-300 mb-2 flex items-center gap-2">
                     <CheckCircle size={16} />
-                    Réponse verrouillée
+                    Response Locked
                   </h3>
-                  <p className="text-sm text-amber-700 dark:text-amber-300">
-                    Une autre collaboration de ce groupe parent est déjà active.
+                  <p className="text-sm text-orange-700 dark:text-orange-300">
+                    Another collaboration in this thread is already active.
                   </p>
                 </div>
               </div>
             )}
 
             {collaboration.status === "active" && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
-                <div className="p-5">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div className="p-5 space-y-2">
                   <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                     <Power size={16} />
-                    Gestion collaboration
+                    Manage Collaboration
                   </h3>
                   <button
                     onClick={handleDeactivate}
                     disabled={actionLoading}
-                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-50 hover:bg-red-100 text-red-700 rounded-lg transition disabled:opacity-60"
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-rose-50 hover:bg-rose-100 text-rose-700 rounded-xl transition-all font-medium disabled:opacity-60"
                   >
                     {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Power size={16} />}
-                    Désactiver cette collaboration active
+                    Deactivate Collaboration
                   </button>
+                  {collaboration.termination_scheduled_at ? (
+                    <div className="rounded-xl bg-amber-50 dark:bg-amber-500/10 border border-amber-200 dark:border-amber-500/20 p-3 mt-1">
+                      <div className="flex items-center gap-2 text-xs text-amber-700 dark:text-amber-400">
+                        <AlarmClock size={13} />
+                        <div>
+                          <p className="font-semibold">Termination Scheduled</p>
+                          <p className="opacity-80">{formatDate(collaboration.termination_scheduled_at)}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => setShowTerminationModal(true)}
+                      disabled={actionLoading}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-50 hover:bg-orange-100 text-orange-700 rounded-xl transition-all font-medium disabled:opacity-60 border border-orange-200"
+                    >
+                      <AlertTriangle size={16} />
+                      Request Termination
+                    </button>
+                  )}
                 </div>
               </div>
             )}
 
             {collaboration.status === "inactive" && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-orange-200 dark:border-orange-800 overflow-hidden">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
                 <div className="p-5 space-y-2">
-                  <h3 className="font-semibold text-orange-700 dark:text-orange-300 mb-1 flex items-center gap-2">
+                  <h3 className="font-semibold text-gray-700 dark:text-gray-300 mb-1 flex items-center gap-2">
                     <Power size={16} />
-                    Collaboration inactive
+                    Collaboration Inactive
                   </h3>
-                  <p className="text-xs text-gray-500">
-                    This collaboration was deactivated.
-                  </p>
+                  <p className="text-xs text-gray-500">This collaboration was deactivated.</p>
                   {collaboration.deactivated_at && (
-                    <p className="text-xs text-gray-500">
-                      Deactivated at: {formatDate(collaboration.deactivated_at)}
-                    </p>
+                    <p className="text-xs text-gray-500">Deactivated at: {formatDate(collaboration.deactivated_at)}</p>
                   )}
                   <button
                     onClick={handleActivate}
                     disabled={actionLoading}
-                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-emerald-50 hover:bg-emerald-100 text-emerald-700 rounded-lg transition disabled:opacity-60"
+                    className="w-full mt-2 flex items-center justify-center gap-2 px-4 py-2.5 bg-teal-50 hover:bg-teal-100 text-teal-700 rounded-xl transition-all font-medium disabled:opacity-60"
                   >
                     {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <CheckCircle size={16} />}
-                    Réactiver cette collaboration
+                    Reactivate Collaboration
                   </button>
                 </div>
               </div>
             )}
 
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+            {/* Message Button */}
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
               <div className="p-5">
                 <h3 className="font-semibold text-gray-800 dark:text-white mb-3 flex items-center gap-2">
                   <MessageSquare size={16} />
-                  Messagerie
+                  Messaging
                 </h3>
                 <Link
                   to={`/messages?receiver_type=STORE&receiver_id=${collaboration.store_id}&collaboration_id=${collaboration.id}&offer_id=${collaboration.offer?.id || ""}&subject=${encodeURIComponent(collaboration.offer?.titre || "Collaboration chat")}`}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-slate-900 hover:bg-slate-800 text-white rounded-lg transition"
+                  className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-r from-slate-800 to-slate-900 hover:from-slate-900 hover:to-slate-950 text-white rounded-xl transition-all font-medium shadow-sm"
                 >
                   <MessageSquare size={16} />
-                  Ouvrir la conversation
+                  Open Conversation
                 </Link>
               </div>
             </div>
 
             {/* Info Card */}
-            <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
+                <div className="flex items-center gap-2">
+                  <div className="p-1.5 rounded-lg bg-gradient-to-br from-gray-500/10 to-gray-600/10">
+                    <Info size={16} className="text-gray-600" />
+                  </div>
+                  <h3 className="font-semibold text-gray-800 dark:text-white">Information</h3>
+                </div>
+              </div>
               <div className="p-4 space-y-3">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 uppercase">Provider Type</span>
@@ -905,32 +1306,32 @@ const CollaborationDetails = () => {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 uppercase">Provider</span>
-                  <span className="text-right text-xs font-medium">
-                    {providerName}
-                    <span className="block text-[11px] text-gray-400">{providerSubtitle}</span>
+                  <div className="text-right">
+                    <span className="text-xs font-medium">{providerName}</span>
+                    <p className="text-[11px] text-gray-400">{providerSubtitle}</p>
                     <button
                       type="button"
                       onClick={() => setProfileTarget({ type: collaboration.provider_type, id: collaboration.provider_id })}
-                      className="mt-1 rounded-md bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-700 hover:bg-slate-200"
+                      className="mt-1 rounded-lg bg-gray-100 px-2 py-1 text-[11px] font-medium text-gray-700 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 transition"
                     >
-                      View
+                      View Profile
                     </button>
-                  </span>
+                  </div>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 uppercase">Store Acceptance</span>
                   {collaboration.accepted_by_store ? (
-                    <CheckCircle size={16} className="text-green-500" />
+                    <CheckCircle size={16} className="text-teal-500" />
                   ) : (
-                    <Clock size={16} className="text-yellow-500" />
+                    <Clock size={16} className="text-orange-500" />
                   )}
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500 uppercase">Your Acceptance</span>
                   {collaboration.accepted_by_provider ? (
-                    <CheckCircle size={16} className="text-green-500" />
+                    <CheckCircle size={16} className="text-teal-500" />
                   ) : (
-                    <Clock size={16} className="text-yellow-500" />
+                    <Clock size={16} className="text-orange-500" />
                   )}
                 </div>
                 {collaboration.deactivated_by_role && (
@@ -947,16 +1348,20 @@ const CollaborationDetails = () => {
 
             {/* Assignment Sources */}
             {collaboration.assignement_source && (
-              <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+              <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 overflow-hidden">
+                <div className="px-5 py-4 border-b border-gray-200 dark:border-gray-800 bg-gradient-to-r from-gray-50 to-white dark:from-gray-800/30 dark:to-gray-900">
+                  <div className="flex items-center gap-2">
+                    <div className="p-1.5 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10">
+                      <FileText size={16} className="text-amber-600" />
+                    </div>
+                    <h4 className="font-semibold text-gray-800 dark:text-white">Assignment Sources</h4>
+                  </div>
+                </div>
                 <div className="p-4">
-                  <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-2 flex items-center gap-2">
-                    <FileText size={12} />
-                    Assignment Sources
-                  </h4>
                   <div className="flex flex-wrap gap-1">
-                    {(collaboration.source_ids || []).map((source, idx) => (
-                      <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-                        {source}
+                    {collaboration.assignement_source?.split(",").map((source, idx) => (
+                      <span key={idx} className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded-lg font-mono">
+                        {source.trim()}
                       </span>
                     ))}
                   </div>
@@ -966,136 +1371,29 @@ const CollaborationDetails = () => {
           </div>
         </div>
       </div>
-      <PublicEntityProfileModal
-        target={profileTarget}
-        entity={profileTarget ? getEntity(profileTarget.type, profileTarget.id) : null}
-        fallbackName={profileTarget ? getEntityName(profileTarget.type, profileTarget.id) : ""}
-        onClose={() => setProfileTarget(null)}
-      />
 
-      {/* Counter Offer Modal */}
-      {showCounterModal && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full p-6 shadow-xl">
-            <div className="flex items-center gap-3 mb-4">
-              <div className="w-10 h-10 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center">
-                <TrendingUp size={20} className="text-blue-600" />
-              </div>
-              <h3 className="text-lg font-semibold text-gray-800 dark:text-white">Make Counter Offer</h3>
-            </div>
-            
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Your Price <span className="text-red-500">*</span>
-                </label>
-                <div className="relative">
-                  <DollarSign className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
-                  <input
-                    type="number"
-                    step="0.01"
-                    value={counterPrice}
-                    onChange={(e) => { setCounterPrice(e.target.value); setCounterError(""); }}
-                    className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Enter your price"
-                  />
-                </div>
-                {counterError && <p className="text-xs text-red-500 mt-1">{counterError}</p>}
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                  Message <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  rows={3}
-                  value={counterMessage}
-                  onChange={(e) => setCounterMessage(e.target.value)}
-                  className="w-full px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 resize-none focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Explain your counter offer..."
-                />
-              </div>
-              
-              <div className="flex gap-3 pt-4">
-                <button
-                  onClick={() => setShowCounterModal(false)}
-                  className="flex-1 px-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={() => handleResponse("counter", counterPrice, counterMessage)}
-                  disabled={actionLoading}
-                  className="flex-1 px-4 py-2 rounded-lg bg-blue-500 hover:bg-blue-600 text-white font-medium transition flex items-center justify-center gap-2"
-                >
-                  {actionLoading ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-                  Send Counter
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-};
+      {/* Profile Modal */}
+      <AnimatePresence>
+        {profileTarget && (
+          <PublicEntityProfileModal
+            target={profileTarget}
+            entity={profileTarget ? getEntity(profileTarget.type, profileTarget.id) : null}
+            fallbackName={profileTarget ? getEntityName(profileTarget.type, profileTarget.id) : ""}
+            onClose={() => setProfileTarget(null)}
+          />
+        )}
+      </AnimatePresence>
 
-const PublicEntityProfileModal = ({ target, entity, fallbackName, onClose }) => {
-  if (!target) return null;
-
-  const profile = entity?.profile || {};
-  const user = entity?.user || {};
-  const displayName = entity?.display_name || fallbackName || "Profile";
-  const subtitle = entity?.subtitle || user.role?.replace("_", " ") || "Profile";
-  const avatar = entity?.avatar || user.avatar;
-
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
-        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
-          <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
-            Close
-          </button>
-        </div>
-        <div className="p-5">
-          <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl bg-blue-100 text-xl font-bold text-blue-700">
-              {avatar ? <img src={avatar} alt={displayName} className="h-full w-full object-cover" /> : displayName.charAt(0)}
-            </div>
-            <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">{displayName}</p>
-              <p className="truncate text-sm text-gray-500">{subtitle}</p>
-            </div>
-          </div>
-
-          {!entity ? (
-            <div className="mt-5 rounded-lg bg-amber-50 p-3 text-sm text-amber-700">
-              Profile details are not available yet.
-            </div>
-          ) : (
-            <div className="mt-5 space-y-3 text-sm">
-              <ProfileLine label="Name" value={displayName} />
-              <ProfileLine label="Role" value={user.role?.replace("_", " ")} />
-              <ProfileLine label="City" value={user.city} />
-              <ProfileLine label="Country" value={user.country} />
-              <ProfileLine label="Activity" value={profile.activity_sector || profile.industry || profile.skills} />
-              <ProfileLine label="Status" value={profile.availability_status || (profile.is_verified_agency ? "Verified" : null)} />
-              <ProfileLine label="Website" value={profile.website || profile.portfolio_url} />
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-};
-
-const ProfileLine = ({ label, value }) => {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between gap-4 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
-      <span className="text-gray-500">{label}</span>
-      <span className="text-right font-medium text-gray-800 dark:text-gray-100">{value}</span>
+      {/* Termination Modal */}
+      <AnimatePresence>
+        {showTerminationModal && (
+          <TerminationModal
+            onClose={() => setShowTerminationModal(false)}
+            onConfirm={handleRequestTermination}
+            loading={terminationLoading}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 };

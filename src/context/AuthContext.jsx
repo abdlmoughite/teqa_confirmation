@@ -1,5 +1,5 @@
 import { createContext, useCallback, useEffect, useMemo, useState } from "react";
-import { getCurrentUser, logout as apiLogout } from "../api/auth";
+import { clearDevToken, getCurrentUser, logout as apiLogout } from "../api/auth";
 import { LOGIN_REDIRECT_URL } from "../api/authConfig";
 import { FULL_ACCESS, isAdminRole, isProviderRole } from "../config/permissions";
 
@@ -8,6 +8,8 @@ export const AuthContext = createContext(null);
 const LEGACY_ROLE_PERMISSION_MAP = {
   STORE: [
     "dashboard.view",
+    "offers.view_marketplace",
+    "offers.view",
     "orders.view",
     "collaborations.view",
     "collaborations.create",
@@ -37,16 +39,39 @@ const LEGACY_ROLE_PERMISSION_MAP = {
   ],
   AGENCY_AGENT: [
     "dashboard.view",
+    "dashboard.view_own",
     "offers.view",
+    "offers.view_marketplace",
     "offers.create",
+    "offers.update_own",
+    "offers.delete_own",
+    "offers.change_status",
     "orders.view",
+    "orders.assign",
     "orders.update_status",
+    "orders.view_stats",
     "collaborations.view",
+    "collaborations.view_own",
     "collaborations.respond",
+    "collaborations.activate",
+    "collaborations.deactivate",
     "wallets.view",
+    "wallets.view_own",
+    "wallets.request_withdrawal",
+    "wallet_transfers.view",
     "commissions.view",
+    "commissions.view_own",
     "invoices.view",
+    "invoices.view_own",
+    "invoices.download",
     "messaging.view",
+    "messaging.view_own",
+    "messaging.send",
+    "messaging.create",
+    "messaging.archive",
+    "messaging.mark_read",
+    "profile.update",
+    "settings.update",
   ],
 };
 
@@ -90,6 +115,7 @@ export const AuthProvider = ({ children }) => {
     } catch {
       // Ignore logout API failure and still clear local session.
     } finally {
+      clearDevToken();
       setUser(null);
       window.location.href = LOGIN_REDIRECT_URL;
     }

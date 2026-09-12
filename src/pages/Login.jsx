@@ -3,7 +3,7 @@ import { clsx } from "clsx";
 import { LockKeyhole } from "lucide-react";
 
 import Button from "../components/ui/Button";
-import Card from "../components/ui/Card";
+import TeqaLogo from "../components/ui/TeqaLogo";
 import { useTranslation } from "../hooks/useTranslation";
 
 const Login = ({ className }) => {
@@ -16,34 +16,63 @@ const Login = ({ className }) => {
       animate={{ opacity: 1, y: 0 }}
       exit={{ opacity: 0, y: -10 }}
       transition={{ duration: 0.3 }}
-      className={clsx(
-        "flex min-h-screen items-center justify-center bg-slate-50 p-4 text-slate-900 dark:bg-slate-950 dark:text-slate-100 md:p-6 lg:p-8",
-        className
-      )}
+      className={clsx("teqa-login", className)}
     >
-      <Card className="w-full max-w-md" bodyClassName="space-y-6">
-        <div className="flex items-center gap-3">
-          <div className="grid h-12 w-12 place-items-center rounded-xl bg-primary-600 text-white dark:bg-primary-500">
-            <LockKeyhole size={22} />
-          </div>
-          <div>
-            <h1 className="text-2xl font-bold tracking-tight md:text-3xl">
-              {t("login.title", "Connexion")}
-            </h1>
-            <p className="text-sm text-slate-600 dark:text-slate-400">
-              {t("login.subtitle", "Accedez a votre espace TeqaConnect.")}
-            </p>
-          </div>
+      <div
+        className="w-full max-w-sm"
+        style={{
+          background: "var(--teqa-surface)",
+          border: "0.5px solid var(--teqa-border-md)",
+          borderRadius: 16,
+          padding: "32px 28px",
+          boxShadow: "0 20px 56px rgba(0,0,0,0.18)",
+        }}
+      >
+        {/* Logo */}
+        <div className="mb-8 flex justify-center">
+          <TeqaLogo size="lg" />
         </div>
 
-        <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-700 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-400">
-          {t("login.external", "La connexion est geree par le service Auth TeqaConnect.")}
+        {/* Title */}
+        <div className="mb-6">
+          <h1 style={{ fontFamily: "var(--font-display)", fontSize: 22, fontWeight: 700, color: "var(--teqa-text)", marginBottom: 6, letterSpacing: 0 }}>
+            {t("login.title", "Connexion")}
+          </h1>
+          <p style={{ fontSize: 13, color: "var(--teqa-muted)" }}>
+            {t("login.subtitle", "Accédez à votre espace TeqaConnect.")}
+          </p>
         </div>
 
-        <Button as="a" href={process.env.REACT_APP_LOGIN_URL || "https://teqaconnect.com/login"} className="w-full">
+        {/* Info banner */}
+        <div
+          className="mb-6 flex items-start gap-3 rounded-lg p-3.5 text-sm"
+          style={{
+            background: "var(--teqa-blue-dim)",
+            border: "0.5px solid rgba(8,145,178,0.25)",
+            color: "var(--teqa-blue)",
+          }}
+        >
+          <LockKeyhole size={15} style={{ flexShrink: 0, marginTop: 1 }} />
+          <span>{t("login.external", "La connexion est gérée par le service Auth TeqaConnect.")}</span>
+        </div>
+
+        {/* CTA */}
+        <Button
+          as="a"
+          href={process.env.REACT_APP_LOGIN_URL || "https://teqa.net/login"}
+          className="w-full"
+          size="lg"
+        >
           {t("login.open", "Ouvrir la page de connexion")}
         </Button>
-      </Card>
+
+        <p
+          className="mt-5 text-center text-xs"
+          style={{ color: "var(--teqa-hint)" }}
+        >
+          TEQA Marketplace · v1.0
+        </p>
+      </div>
     </motion.main>
   );
 };

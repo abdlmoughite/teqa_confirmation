@@ -24,9 +24,16 @@ import {
   History,
   Shield,
   Zap,
+  Banknote,
+  X,
+  Send,
+  Building2,
+  Phone,
+  User,
 } from "lucide-react";
 
-import { GetWalletSummary, GetMyTransactions, GetTransactionStats } from "../../api/auth";
+import { GetWalletSummary, GetMyTransactions, GetTransactionStats, GetWithdrawalRequests, CreateWithdrawalRequest, CancelWithdrawalRequest } from "../../api/auth";
+import TeqaLoader from "../shared/TeqaLoader";
 import CreateWalletModal from "./CreateWalletModal";
 import TransactionDetailsModal from "./TransactionDetailsModal";
 import { usePublicEntities } from "../../hooks/usePublicEntities";
@@ -47,7 +54,7 @@ const ICON_CONTAINERS = {
   green:   { bg: "var(--teqa-green-dim)", color: "var(--teqa-green)" },
   blue:    { bg: "var(--teqa-blue-dim)",  color: "var(--teqa-blue)"  },
   red:     { bg: "var(--teqa-red-dim)",   color: "var(--teqa-red)"   },
-  warning: { bg: "rgba(245,158,11,0.12)", color: "var(--teqa-warning)"},
+  warning: { bg: "rgba(217,119,6,0.12)", color: "var(--teqa-warning)"},
   neutral: { bg: "var(--teqa-surface3)",  color: "var(--teqa-muted)" },
 };
 
@@ -81,6 +88,15 @@ const TRANSACTION_STATUS_CONFIG = {
 };
 
 const ITEMS_PER_PAGE = 10;
+
+const WITHDRAWAL_STATUS_CONFIG = {
+  pending:   { label: "En attente",  icon: Clock,       badgeClass: "badge badge-neutral", variant: "warning" },
+  approved:  { label: "Approuvé",    icon: CheckCircle, badgeClass: "badge badge-green",   variant: "green"   },
+  rejected:  { label: "Refusé",      icon: XCircle,     badgeClass: "badge badge-red",     variant: "red"     },
+  paid:      { label: "Payé",        icon: Banknote,    badgeClass: "badge badge-green",   variant: "green"   },
+  cancelled: { label: "Annulé",      icon: XCircle,     badgeClass: "badge badge-neutral", variant: "neutral" },
+};
+const PAYOUT_LABELS = { bank_transfer: "Virement bancaire", cash_plus: "Cash Plus" };
 
 const formatOwnerType = (type) =>
   !type ? "Wallet account"
@@ -240,6 +256,14 @@ const MyWallet = () => {
   const [statusFilter,        setStatusFilter]        = useState("all");
   const [currentPage,         setCurrentPage]         = useState(1);
 
+  /* ── Withdrawals state ── */
+  const [withdrawals,          setWithdrawals]          = useState([]);
+  const [withdrawalsLoading,   setWithdrawalsLoading]   = useState(false);
+  const [showWithdrawalModal,  setShowWithdrawalModal]  = useState(false);
+  const [wForm,                setWForm]                = useState({ amount: "", payout_method: "bank_transfer", rib: "", beneficiary_name: "", full_name: "", cin_number: "", phone_number: "" });
+  const [wError,               setWError]               = useState("");
+  const [wSubmitting,          setWSubmitting]          = useState(false);
+
   /* ---------- fetch ---------- */
   const fetchData = async () => {
     setLoading(true);
@@ -272,6 +296,50 @@ const MyWallet = () => {
 
   useEffect(() => { fetchData(); }, []);
 
+  const fetchWithdrawals = async () => {
+    setWithdrawalsLoading(true);
+    try {
+      const res = await GetWithdrawalRequests();
+      setWithdrawals(res.data?.results || res.data || []);
+    } catch { /* silent */ }
+    finally { setWithdrawalsLoading(false); }
+  };
+
+  useEffect(() => { if (activeTab === "withdrawals") fetchWithdrawals(); }, [activeTab]);
+
+  const handleCreateWithdrawal = async (e) => {
+    e.preventDefault();
+    setWError("");
+    if (!wForm.amount || parseFloat(wForm.amount) <= 0) { setWError("Entrez un montant valide"); return; }
+    const payload = { amount: parseFloat(wForm.amount), payout_method: wForm.payout_method };
+    if (wForm.payout_method === "bank_transfer") {
+      if (!wForm.rib || !wForm.beneficiary_name) { setWError("RIB et nom du bénéficiaire requis"); return; }
+      payload.rib = wForm.rib;
+      payload.beneficiary_name = wForm.beneficiary_name;
+    } else {
+      if (!wForm.full_name || !wForm.cin_number || !wForm.phone_number) { setWError("Nom, CIN et téléphone requis"); return; }
+      payload.full_name = wForm.full_name;
+      payload.cin_number = wForm.cin_number;
+      payload.phone_number = wForm.phone_number;
+    }
+    setWSubmitting(true);
+    try {
+      await CreateWithdrawalRequest(payload);
+      setShowWithdrawalModal(false);
+      setWForm({ amount: "", payout_method: "bank_transfer", rib: "", beneficiary_name: "", full_name: "", cin_number: "", phone_number: "" });
+      await fetchWithdrawals();
+    } catch (err) {
+      setWError(err.response?.data?.detail || "Échec de la demande");
+    } finally { setWSubmitting(false); }
+  };
+
+  const handleCancelWithdrawal = async (wid) => {
+    try {
+      await CancelWithdrawalRequest(wid);
+      await fetchWithdrawals();
+    } catch { /* toast could go here */ }
+  };
+
   const publicEntityRefs = useMemo(
     () => transactions.filter((t) => t.counterparty_type && t.counterparty_wallet)
                       .map((t) => ({ type: t.counterparty_type, id: t.counterparty_wallet })),
@@ -301,19 +369,7 @@ const MyWallet = () => {
   /* ---------- states ---------- */
 
   if (loading) {
-    return (
-      <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", padding: "80px 0", gap: 16 }}>
-        {/* TEQA pyramid loader */}
-        <div className="teqa-loading-mark" style={{ transform: "scale(0.8)" }}>
-          <svg width="60" height="56" viewBox="0 0 18 22" fill="none">
-            <polygon className="teqa-loading-tri"  points="9,0 18,8 0,8"              fill="var(--teqa-green)" />
-            <rect    className="teqa-loading-bar1" x="2" y="10" width="14" height="4" rx="1" fill="var(--teqa-blue)"  />
-            <rect    className="teqa-loading-bar2" x="0" y="16" width="18" height="4" rx="1" fill="var(--teqa-red)"   />
-          </svg>
-        </div>
-        <p style={{ fontSize: 13, color: "var(--teqa-muted)" }}>Chargement du wallet…</p>
-      </div>
-    );
+    return <TeqaLoader label="Chargement du wallet…" />;
   }
 
   if (error) {
@@ -431,7 +487,7 @@ const MyWallet = () => {
 
         {/* ── TABS ── */}
         <div style={{ display: "flex", borderBottom: "0.5px solid var(--teqa-border)", gap: 0 }}>
-          {[{ key: "overview", label: "Vue d'ensemble", icon: Zap }, { key: "transactions", label: "Transactions", icon: History }].map((tab) => {
+          {[{ key: "overview", label: "Vue d'ensemble", icon: Zap }, { key: "transactions", label: "Transactions", icon: History }, { key: "withdrawals", label: "Retraits", icon: Banknote }].map((tab) => {
             const active = activeTab === tab.key;
             return (
               <button
@@ -675,8 +731,236 @@ const MyWallet = () => {
               )}
             </motion.div>
           )}
+          {/* ── WITHDRAWALS TAB ── */}
+          {activeTab === "withdrawals" && (
+            <motion.div key="withdrawals" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              style={{ display: "flex", flexDirection: "column", gap: 12 }}
+            >
+              {/* Header row */}
+              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                <p style={{ fontSize: 13, color: "var(--teqa-muted)", margin: 0 }}>
+                  {withdrawals.length} demande{withdrawals.length !== 1 ? "s" : ""}
+                </p>
+                <button onClick={() => setShowWithdrawalModal(true)} className="btn-primary">
+                  <Plus size={14} /> Nouveau retrait
+                </button>
+              </div>
+
+              {withdrawalsLoading ? (
+                <TeqaLoader size={0.6} />
+              ) : withdrawals.length === 0 ? (
+                <div className="teqa-card" style={{ padding: 40, textAlign: "center" }}>
+                  <IconBox icon={Banknote} variant="neutral" size={22} boxSize={50} />
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "var(--teqa-text)", margin: "14px 0 6px" }}>Aucune demande de retrait</p>
+                  <p style={{ fontSize: 13, color: "var(--teqa-muted)", margin: "0 0 20px" }}>Créez votre première demande pour retirer des fonds</p>
+                  <button onClick={() => setShowWithdrawalModal(true)} className="btn-primary" style={{ margin: "0 auto" }}>
+                    <Plus size={14} /> Nouveau retrait
+                  </button>
+                </div>
+              ) : (
+                <div className="teqa-card" style={{ overflow: "hidden", padding: 0 }}>
+                  {withdrawals.map((wr, idx) => {
+                    const cfg = WITHDRAWAL_STATUS_CONFIG[wr.status] || WITHDRAWAL_STATUS_CONFIG.pending;
+                    const StatusIcon = cfg.icon;
+                    return (
+                      <motion.div
+                        key={wr.id}
+                        initial={{ opacity: 0, y: 6 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: idx * 0.04 }}
+                        style={{
+                          display: "flex", alignItems: "center", justifyContent: "space-between",
+                          padding: "14px 18px",
+                          borderBottom: idx < withdrawals.length - 1 ? "0.5px solid var(--teqa-border)" : "none",
+                          gap: 12,
+                        }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                          <IconBox icon={Banknote} variant={cfg.variant} size={15} boxSize={34} />
+                          <div>
+                            <p style={{ fontSize: 13, fontWeight: 600, color: "var(--teqa-text)", margin: "0 0 2px" }}>
+                              {formatPrice(wr.amount, wr.currency || "MAD")}
+                            </p>
+                            <p style={{ fontSize: 11, color: "var(--teqa-muted)", margin: 0 }}>
+                              {PAYOUT_LABELS[wr.payout_method] || wr.payout_method} · {formatDate(wr.created_at)}
+                            </p>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                          <span className={cfg.badgeClass} style={{ gap: 4 }}>
+                            <StatusIcon size={10} />
+                            {cfg.label}
+                          </span>
+                          {wr.status === "pending" && (
+                            <button
+                              onClick={() => handleCancelWithdrawal(wr.id)}
+                              className="icon-button"
+                              style={{ width: 28, height: 28 }}
+                              title="Annuler"
+                            >
+                              <X size={13} style={{ color: "var(--teqa-red)" }} />
+                            </button>
+                          )}
+                        </div>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
         </AnimatePresence>
       </div>
+
+      {/* Withdrawal Modal */}
+      <AnimatePresence>
+        {showWithdrawalModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            style={{ position: "fixed", inset: 0, zIndex: 50, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.55)", backdropFilter: "blur(4px)", padding: 16 }}
+            onClick={() => setShowWithdrawalModal(false)}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: -16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: -16 }}
+              onClick={(e) => e.stopPropagation()}
+              style={{ background: "var(--teqa-surface)", border: "0.5px solid var(--teqa-border-md)", borderRadius: 18, width: "100%", maxWidth: 460, overflow: "hidden", boxShadow: "var(--shadow-lg)" }}
+            >
+              {/* Modal header */}
+              <div style={{ borderBottom: "0.5px solid var(--teqa-border)", padding: "16px 20px", display: "flex", alignItems: "center", gap: 12 }}>
+                <IconBox icon={Banknote} variant="green" size={18} boxSize={38} />
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ fontSize: 16, fontWeight: 700, fontFamily: "var(--font-display)", color: "var(--teqa-text)", margin: 0 }}>
+                    Demande de retrait
+                  </h3>
+                  <p style={{ fontSize: 12, color: "var(--teqa-muted)", margin: 0 }}>Solde dispo : {formatPrice(selectedWallet?.solde || 0, "MAD")}</p>
+                </div>
+                <button onClick={() => setShowWithdrawalModal(false)} className="icon-button" style={{ width: 30, height: 30 }}>
+                  <X size={15} style={{ color: "var(--teqa-muted)" }} />
+                </button>
+              </div>
+
+              <form onSubmit={handleCreateWithdrawal} style={{ padding: "20px", display: "flex", flexDirection: "column", gap: 14 }}>
+
+                {/* Amount */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>
+                    Montant (MAD) *
+                  </label>
+                  <input
+                    type="number"
+                    step="0.01"
+                    min="1"
+                    required
+                    value={wForm.amount}
+                    onChange={(e) => setWForm((f) => ({ ...f, amount: e.target.value }))}
+                    placeholder="0.00"
+                    className="teqa-input"
+                    style={{ width: "100%" }}
+                  />
+                </div>
+
+                {/* Payout method */}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>
+                    Méthode de paiement
+                  </label>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {[{ value: "bank_transfer", label: "Virement bancaire", icon: Building2 }, { value: "cash_plus", label: "Cash Plus", icon: Phone }].map(({ value, label, icon: Icon }) => {
+                      const selected = wForm.payout_method === value;
+                      return (
+                        <button
+                          key={value}
+                          type="button"
+                          onClick={() => setWForm((f) => ({ ...f, payout_method: value }))}
+                          style={{
+                            flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 6,
+                            padding: "12px 8px", borderRadius: 10, cursor: "pointer", transition: "all 0.15s",
+                            border: `0.5px solid ${selected ? "var(--teqa-green)" : "var(--teqa-border)"}`,
+                            background: selected ? "var(--teqa-green-dim)" : "var(--teqa-bg)",
+                            color: selected ? "var(--teqa-green)" : "var(--teqa-muted)",
+                            fontSize: 12, fontWeight: 500,
+                          }}
+                        >
+                          <Icon size={18} />
+                          {label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Bank transfer fields */}
+                {wForm.payout_method === "bank_transfer" && (
+                  <>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>RIB *</label>
+                      <input
+                        type="text"
+                        value={wForm.rib}
+                        onChange={(e) => setWForm((f) => ({ ...f, rib: e.target.value }))}
+                        placeholder="24 chiffres RIB"
+                        className="teqa-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>Nom du bénéficiaire *</label>
+                      <input
+                        type="text"
+                        value={wForm.beneficiary_name}
+                        onChange={(e) => setWForm((f) => ({ ...f, beneficiary_name: e.target.value }))}
+                        placeholder="Nom complet"
+                        className="teqa-input"
+                        style={{ width: "100%" }}
+                      />
+                    </div>
+                  </>
+                )}
+
+                {/* Cash Plus fields */}
+                {wForm.payout_method === "cash_plus" && (
+                  <>
+                    <div>
+                      <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>Nom complet *</label>
+                      <input type="text" value={wForm.full_name} onChange={(e) => setWForm((f) => ({ ...f, full_name: e.target.value }))} placeholder="Prénom Nom" className="teqa-input" style={{ width: "100%" }} />
+                    </div>
+                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>CIN *</label>
+                        <input type="text" value={wForm.cin_number} onChange={(e) => setWForm((f) => ({ ...f, cin_number: e.target.value }))} placeholder="CIN" className="teqa-input" style={{ width: "100%" }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 500, color: "var(--teqa-muted)", display: "block", marginBottom: 6 }}>Téléphone *</label>
+                        <input type="tel" value={wForm.phone_number} onChange={(e) => setWForm((f) => ({ ...f, phone_number: e.target.value }))} placeholder="+212…" className="teqa-input" style={{ width: "100%" }} />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {wError && (
+                  <div style={{ padding: "10px 14px", borderRadius: 8, background: "var(--teqa-red-dim)", border: "0.5px solid rgba(220,38,38,0.3)" }}>
+                    <p style={{ fontSize: 12, color: "var(--teqa-red)", margin: 0 }}>{wError}</p>
+                  </div>
+                )}
+
+                <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
+                  <button type="button" onClick={() => setShowWithdrawalModal(false)} className="btn-secondary" style={{ flex: 1 }}>
+                    Annuler
+                  </button>
+                  <button type="submit" disabled={wSubmitting} className="btn-primary" style={{ flex: 1 }}>
+                    {wSubmitting ? <Loader2 size={14} className="animate-spin" /> : <Send size={14} />}
+                    Soumettre
+                  </button>
+                </div>
+              </form>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* Modals */}
       <CreateWalletModal

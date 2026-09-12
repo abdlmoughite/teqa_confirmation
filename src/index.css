@@ -38,7 +38,7 @@
 
   :focus-visible {
     outline: none;
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   }
 
   img {
@@ -143,7 +143,7 @@
   .textarea:focus,
   .teqa-input:focus {
     border-color: var(--teqa-green);
-    box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+    box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
     outline: none;
   }
 
@@ -217,12 +217,12 @@
 
   .btn-danger {
     background: var(--teqa-red-dim);
-    border: 0.5px solid rgba(239, 68, 68, 0.25);
+    border: 0.5px solid rgba(220, 38, 38, 0.25);
     color: var(--teqa-red);
   }
 
   .btn-danger:hover {
-    background: rgba(239, 68, 68, 0.2);
+    background: rgba(220, 38, 38, 0.2);
   }
 
   .btn-icon,
@@ -355,7 +355,7 @@
 
   .order-card__amount,
   .tone-accent        { color: var(--teqa-green); }
-  .tone-success       { color: var(--teqa-green); }
+  .tone-success       { color: var(--teqa-success); }
   .tone-danger        { color: var(--teqa-red); }
 
   /* ---- Alerts ---- */
@@ -369,20 +369,20 @@
   }
 
   .alert-success {
-    background: var(--teqa-green-dim);
-    border: 0.5px solid rgba(34, 197, 94, 0.25);
-    color: var(--teqa-green);
+    background: var(--teqa-success-dim);
+    border: 0.5px solid rgba(22, 163, 74, 0.25);
+    color: var(--teqa-success);
   }
 
   .alert-danger {
     background: var(--teqa-red-dim);
-    border: 0.5px solid rgba(239, 68, 68, 0.25);
+    border: 0.5px solid rgba(220, 38, 38, 0.25);
     color: var(--teqa-red);
   }
 
   .alert-warning {
-    background: rgba(245, 158, 11, 0.12);
-    border: 0.5px solid rgba(245, 158, 11, 0.25);
+    background: rgba(217, 119, 6, 0.12);
+    border: 0.5px solid rgba(217, 119, 6, 0.25);
     color: var(--teqa-warning);
   }
 
@@ -468,6 +468,45 @@
     font-family: var(--font-display) !important;
     font-weight: 500 !important;
   }
+
+  /* ---- Heading scale (referenced in components) ---- */
+
+  h1, .text-h1 {
+    font-family: var(--font-display);
+    font-size: 24px;
+    font-weight: 700;
+    color: var(--teqa-text);
+    letter-spacing: 0;
+    margin: 0;
+  }
+
+  h2, .text-h2 {
+    font-family: var(--font-display);
+    font-size: 18px;
+    font-weight: 500;
+    color: var(--teqa-text);
+    letter-spacing: 0;
+    margin: 0;
+  }
+
+  h3, .text-h3 {
+    font-family: var(--font-body);
+    font-size: 15px;
+    font-weight: 500;
+    color: var(--teqa-text);
+    margin: 0;
+  }
+
+  /* ---- Tone helpers (referenced in Dashboard) ---- */
+
+  .tone-accent   { color: var(--teqa-green); }
+  .tone-success  { color: var(--teqa-green); }
+  .tone-danger   { color: var(--teqa-red); }
+  .tone-warning  { color: var(--teqa-warning); }
+  .tone-info     { color: var(--teqa-blue); }
+  .tone-muted    { color: var(--teqa-muted); }
+  .text-app-muted { color: var(--teqa-muted); }
+  .text-app-strong { color: var(--teqa-text); }
 }
 
 /* ==============================================
@@ -505,8 +544,44 @@
    ============================================== */
 
 @media (max-width: 767px) {
-  .page-shell {
-    padding-bottom: 76px;
+  /* Show bottom nav */
+  .teqa-bottom-nav { display: grid; }
+
+  /* Toast above bottom nav */
+  .toast-viewport { bottom: 80px !important; right: 12px !important; }
+
+  /* Topbar compact on mobile */
+  .topbar,
+  .teqa-header {
+    padding: 10px 0 12px;
+    min-height: 56px;
+  }
+
+  /* Slightly smaller page title spacing */
+  .page-shell { padding-bottom: 0; }
+
+  /* Cards full-width on mobile */
+  .teqa-card { border-radius: var(--radius-lg); }
+
+  /* Stat cards stack */
+  .metric-card { padding: 14px; }
+
+  /* Table scroll hint */
+  .data-table-shell { overflow-x: auto; }
+}
+
+/* Tablet (768-1023px) */
+@media (min-width: 768px) and (max-width: 1023px) {
+  .topbar,
+  .teqa-header {
+    padding: 12px 0 16px;
+  }
+}
+
+/* Safe area for notch phones */
+@supports (padding-bottom: env(safe-area-inset-bottom)) {
+  .teqa-bottom-nav {
+    padding-bottom: calc(env(safe-area-inset-bottom) + 4px);
   }
 }
 
@@ -626,7 +701,7 @@
 
 [class*="bg-amber-"],
 [class*="from-amber-"],
-[class*="to-orange-"] { background: rgba(245, 158, 11, 0.12) !important; color: var(--teqa-warning) !important; }
+[class*="to-orange-"] { background: rgba(217, 119, 6, 0.12) !important; color: var(--teqa-warning) !important; }
 
 [class*="text-amber-"],
 [class*="text-orange-"] { color: var(--teqa-warning) !important; }
@@ -650,7 +725,7 @@ input:focus,
 select:focus,
 textarea:focus {
   border-color: var(--teqa-green) !important;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15) !important;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
 }
 
 button[class*="bg-gradient"],
@@ -712,3 +787,22 @@ a[class*="bg-primary"]:hover {
   background: rgba(0, 0, 0, 0.62) !important;
   backdrop-filter: blur(4px);
 }
+
+/* ==============================================
+   ICON & TEXT — ADAPTATION THÈME CLAIR / SOMBRE
+   Corrections ciblées pour la visibilité des
+   icônes Lucide et textes secondaires dans les
+   deux modes.
+   ============================================== */
+
+/* ── gray-300 : absent du bridge, reste #d1d5db (invisible sur fond clair) ── */
+[class*="text-gray-300"] { color: var(--teqa-hint) !important; }
+
+/* ── gray-400 en dark : --teqa-hint vaut #666 → trop sombre sur #3a3a3a ── */
+.dark [class*="text-gray-300"] { color: var(--teqa-muted) !important; }
+.dark [class*="text-gray-400"] { color: var(--teqa-muted) !important; }
+
+/* ── slate-300 / slate-400 : même correction ── */
+[class*="text-slate-300"] { color: var(--teqa-hint) !important; }
+.dark [class*="text-slate-300"] { color: var(--teqa-muted) !important; }
+.dark [class*="text-slate-400"] { color: var(--teqa-muted) !important; }

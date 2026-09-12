@@ -23,18 +23,27 @@
   --teqa-border:    rgba(26, 26, 26, 0.08);
   --teqa-border-md: rgba(26, 26, 26, 0.14);
 
-  /* Brand — extraites du logo TEQA */
-  --teqa-green:       #22c55e;
-  --teqa-green-dim:   rgba(34, 197, 94, 0.12);
-  --teqa-green-hover: #16a34a;
+  /* Brand — nouvelle palette (bleu, distincte du vert historique et de
+     l'indigo de teqa_store). Les noms de variables teqa-green et teqa-blue
+     sont conservés pour éviter un renommage massif dans tout le code (voir
+     grep effectué avant ce changement) ; seules leurs valeurs changent. */
+  --teqa-green:       #2563eb;
+  --teqa-green-dim:   rgba(37, 99, 235, 0.12);
+  --teqa-green-hover: #1d4ed8;
 
-  --teqa-blue:     #3b82f6;
-  --teqa-blue-dim: rgba(59, 130, 246, 0.12);
+  --teqa-blue:     #0891b2;
+  --teqa-blue-dim: rgba(8, 145, 178, 0.12);
 
-  --teqa-red:     #ef4444;
-  --teqa-red-dim: rgba(239, 68, 68, 0.12);
+  --teqa-red:     #dc2626;
+  --teqa-red-dim: rgba(220, 38, 38, 0.12);
 
-  --teqa-warning: #f59e0b;
+  --teqa-warning: #d97706;
+
+  /* Succès — découplé du bleu de marque pour garder le vert = positif
+     (convention UX standard : delta positif, paiement réussi, offre
+     acceptée, etc.) */
+  --teqa-success:     #16a34a;
+  --teqa-success-dim: rgba(22, 163, 74, 0.12);
 
   /* Text */
   --teqa-text:     #1a1a1a;
@@ -43,7 +52,6 @@
   --teqa-on-brand: #ffffff;
 
   /* Semantic */
-  --teqa-success: var(--teqa-green);
   --teqa-danger:  var(--teqa-red);
   --teqa-info:    var(--teqa-blue);
 
@@ -76,26 +84,27 @@
   --transition-normal: 250ms ease;
 
   /* Aliases de compatibilité (anciens screens) */
-  --color-primary:       var(--teqa-green);
-  --color-primary-hover: var(--teqa-green-hover);
-  --color-primary-light: var(--teqa-green-dim);
-  --color-primary-dark:  var(--teqa-green-hover);
+  --color-primary:         var(--teqa-green);
+  --color-primary-hover:   var(--teqa-green-hover);
+  --color-primary-light:   var(--teqa-green-dim);
+  --color-primary-dark:    var(--teqa-green-hover);
+  --color-primary-surface: var(--teqa-green-dim);
 
-  --color-success:        var(--teqa-green);
-  --color-success-bg:     var(--teqa-green-dim);
-  --color-success-border: rgba(34, 197, 94, 0.25);
+  --color-success:        var(--teqa-success);
+  --color-success-bg:     var(--teqa-success-dim);
+  --color-success-border: rgba(22, 163, 74, 0.25);
 
   --color-warning:        var(--teqa-warning);
-  --color-warning-bg:     rgba(245, 158, 11, 0.12);
-  --color-warning-border: rgba(245, 158, 11, 0.24);
+  --color-warning-bg:     rgba(217, 119, 6, 0.12);
+  --color-warning-border: rgba(217, 119, 6, 0.24);
 
   --color-danger:        var(--teqa-red);
   --color-danger-bg:     var(--teqa-red-dim);
-  --color-danger-border: rgba(239, 68, 68, 0.25);
+  --color-danger-border: rgba(220, 38, 38, 0.25);
 
   --color-info:        var(--teqa-blue);
   --color-info-bg:     var(--teqa-blue-dim);
-  --color-info-border: rgba(59, 130, 246, 0.25);
+  --color-info-border: rgba(8, 145, 178, 0.25);
 
   --bg-body:      var(--teqa-bg);
   --bg-surface:   var(--teqa-surface);
@@ -363,13 +372,13 @@ input:focus,
 textarea:focus,
 select:focus {
   border-color: var(--teqa-green);
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
   outline: none;
 }
 
 :focus-visible {
   outline: none;
-  box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15);
 }
 
 /* Input wrapper avec icône */
@@ -495,7 +504,7 @@ select:focus {
 }
 
 .teqa-stat__delta           { font-size: 12px; margin: 10px 0 0; }
-.teqa-stat__delta--up       { color: var(--teqa-green); }
+.teqa-stat__delta--up       { color: var(--teqa-success); }
 .teqa-stat__delta--down     { color: var(--teqa-red); }
 .teqa-stat__delta--neutral  { color: var(--teqa-muted); }
 
@@ -637,7 +646,7 @@ select:focus {
 
 .teqa-thread-message__accepted {
   align-items: center;
-  color: var(--teqa-green);
+  color: var(--teqa-success);
   display: inline-flex;
   font-weight: 500;
   gap: 6px;
@@ -741,7 +750,7 @@ select:focus {
   padding: 12px 16px;
 }
 
-.toast-card--success { border-left-color: var(--teqa-green); }
+.toast-card--success { border-left-color: var(--teqa-success); }
 .toast-card--error   { border-left-color: var(--teqa-red); }
 .toast-card--info    { border-left-color: var(--teqa-blue); }
 .toast-card--warning { border-left-color: var(--teqa-warning); }
@@ -752,7 +761,7 @@ select:focus {
 .toast-close   { color: var(--teqa-muted); line-height: 0; padding: 2px; }
 
 .toast-card--success .toast-icon,
-.toast-card--success .toast-close:hover { color: var(--teqa-green); }
+.toast-card--success .toast-close:hover { color: var(--teqa-success); }
 
 .toast-card--error .toast-icon,
 .toast-card--error .toast-close:hover   { color: var(--teqa-red); }
@@ -770,11 +779,10 @@ select:focus {
   border-top: 0.5px solid var(--teqa-border);
   bottom: 0;
   display: none;
-  gap: 2px;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
   left: 0;
-  min-height: 64px;
-  padding: 6px 8px;
+  min-height: 68px;
+  padding: 4px 4px calc(env(safe-area-inset-bottom, 0px) + 4px);
   position: fixed;
   right: 0;
   z-index: 60;
@@ -784,16 +792,21 @@ select:focus {
   align-items: center;
   border-radius: var(--radius-lg);
   color: var(--teqa-muted);
+  cursor: pointer;
   display: flex;
   flex-direction: column;
+  font-family: var(--font-body);
   font-size: 10px;
-  gap: 4px;
+  gap: 3px;
   justify-content: center;
-  min-height: 50px;
+  min-height: 52px;
+  position: relative;
+  transition: color 0.15s;
 }
 
-.teqa-bottom-nav__item.active       { color: var(--teqa-green); }
-.teqa-bottom-nav__item.active svg   { stroke: var(--teqa-green); }
+.teqa-bottom-nav__item:hover         { color: var(--teqa-text); }
+.teqa-bottom-nav__item.active        { color: var(--teqa-green); }
+.teqa-bottom-nav__item.active svg    { stroke: var(--teqa-green); }
 
 /* ==============================================
    MESSAGE BUBBLES

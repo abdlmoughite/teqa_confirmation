@@ -1,6 +1,7 @@
 // AgencyCollaborations.jsx
 import { useState, useEffect, useMemo } from "react";
 import { Link } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 import {
   Handshake,
   Search,
@@ -27,7 +28,10 @@ import {
   ArrowRight,
   Reply,
   Send,
-  Power
+  Power,
+  Zap,
+  Shield,
+  Star
 } from "lucide-react";
 import {
   ActivateCollaboration,
@@ -39,53 +43,80 @@ import { useToast } from "../../context/ToastContext";
 import { usePublicEntities } from "../../hooks/usePublicEntities";
 
 /* =========================================================
-   CONSTANTS
+   CONSTANTS - Status Border Colors Only
 ========================================================= */
 
-const STATUS_CONFIG = {
-  pending: { 
-    label: "Pending", 
-    color: "yellow", 
-    icon: Clock,
-    bgColor: "bg-yellow-100 dark:bg-yellow-900/30",
-    textColor: "text-yellow-700 dark:text-yellow-400",
-    borderColor: "border-yellow-200 dark:border-yellow-800"
+const STATUS_BORDER_CONFIG = {
+  pending: {
+    borderColor: "border-l-amber-500",
+    badgeColor: "bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400"
   },
-  active: { 
-    label: "Active", 
-    color: "green", 
+  active: {
+    borderColor: "border-l-emerald-500",
+    badgeColor: "bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400"
+  },
+  inactive: {
+    borderColor: "border-l-slate-500",
+    badgeColor: "bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-400"
+  },
+  rejected: {
+    borderColor: "border-l-rose-500",
+    badgeColor: "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-400"
+  },
+  countered: {
+    borderColor: "border-l-purple-500",
+    badgeColor: "bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-400"
+  },
+  cancelled: {
+    borderColor: "border-l-gray-500",
+    badgeColor: "bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-400"
+  }
+};
+
+const STATUS_CONFIG = {
+  pending: {
+    label: "Pending",
+    color: "amber",
+    icon: Clock,
+    bgColor: "bg-amber-100 dark:bg-amber-900/30",
+    textColor: "text-amber-700 dark:text-amber-400",
+    borderColor: "border-amber-200 dark:border-amber-800"
+  },
+  active: {
+    label: "Active",
+    color: "emerald",
     icon: CheckCircle,
-    bgColor: "bg-green-100 dark:bg-green-900/30",
-    textColor: "text-green-700 dark:text-green-400",
-    borderColor: "border-green-200 dark:border-green-800"
+    bgColor: "bg-emerald-100 dark:bg-emerald-900/30",
+    textColor: "text-emerald-700 dark:text-emerald-400",
+    borderColor: "border-emerald-200 dark:border-emerald-800"
   },
   inactive: {
     label: "Inactive",
-    color: "orange",
+    color: "slate",
     icon: Power,
-    bgColor: "bg-orange-100 dark:bg-orange-900/30",
-    textColor: "text-orange-700 dark:text-orange-400",
-    borderColor: "border-orange-200 dark:border-orange-800"
+    bgColor: "bg-slate-100 dark:bg-slate-800",
+    textColor: "text-slate-600 dark:text-slate-400",
+    borderColor: "border-slate-200 dark:border-slate-700"
   },
-  rejected: { 
-    label: "Rejected", 
-    color: "red", 
+  rejected: {
+    label: "Rejected",
+    color: "rose",
     icon: XCircle,
-    bgColor: "bg-red-100 dark:bg-red-900/30",
-    textColor: "text-red-700 dark:text-red-400",
-    borderColor: "border-red-200 dark:border-red-800"
+    bgColor: "bg-rose-100 dark:bg-rose-900/30",
+    textColor: "text-rose-700 dark:text-rose-400",
+    borderColor: "border-rose-200 dark:border-rose-800"
   },
-  countered: { 
-    label: "Countered", 
-    color: "purple", 
+  countered: {
+    label: "Countered",
+    color: "purple",
     icon: TrendingUp,
     bgColor: "bg-purple-100 dark:bg-purple-900/30",
     textColor: "text-purple-700 dark:text-purple-400",
     borderColor: "border-purple-200 dark:border-purple-800"
   },
-  cancelled: { 
-    label: "Cancelled", 
-    color: "gray", 
+  cancelled: {
+    label: "Cancelled",
+    color: "gray",
     icon: XCircle,
     bgColor: "bg-gray-100 dark:bg-gray-800",
     textColor: "text-gray-600 dark:text-gray-400",
@@ -115,6 +146,7 @@ const AgencyCollaborations = () => {
   const [activatingGroup, setActivatingGroup] = useState({});
   const [serverSummary, setServerSummary] = useState(null);
   const [profileTarget, setProfileTarget] = useState(null);
+  const [hoveredCard, setHoveredCard] = useState(null);
 
   /* =========================================================
      FETCH COLLABORATIONS
@@ -122,16 +154,16 @@ const AgencyCollaborations = () => {
   const fetchCollaborations = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const params = {};
       if (statusFilter !== "all") params.status = statusFilter;
-      
+
       const [response, summaryResponse] = await Promise.all([
         GetCollaborations(params),
         GetCollaborationSummary().catch(() => ({ data: null })),
       ]);
-      
+
       let collabData = [];
       if (response.data?.results) {
         collabData = response.data.results;
@@ -142,7 +174,7 @@ const AgencyCollaborations = () => {
       } else if (Array.isArray(response)) {
         collabData = response;
       }
-      
+
       const normalizedCollabs = collabData.map((collaboration) => ({
         ...collaboration,
         offer: collaboration.offer_details || collaboration.offer,
@@ -153,7 +185,7 @@ const AgencyCollaborations = () => {
       if (summaryResponse.data?.success) {
         setServerSummary(summaryResponse.data);
       }
-      
+
     } catch (err) {
       if (process.env.NODE_ENV !== "production") console.warn("Error fetching collaborations:", err);
       const message = err.response?.data?.message || "Failed to load collaborations";
@@ -176,12 +208,12 @@ const AgencyCollaborations = () => {
       setGroupedCollabs([]);
       return;
     }
-    
+
     const groups = new Map();
-    
+
     data.forEach(collab => {
       let rootId = null;
-      
+
       if (collab.root_collaboration) {
         if (typeof collab.root_collaboration === 'object') {
           rootId = collab.root_collaboration.id;
@@ -189,11 +221,11 @@ const AgencyCollaborations = () => {
           rootId = collab.root_collaboration;
         }
       }
-      
+
       if (!rootId) {
         rootId = collab.id;
       }
-      
+
       if (!groups.has(rootId)) {
         groups.set(rootId, {
           rootId: rootId,
@@ -211,10 +243,10 @@ const AgencyCollaborations = () => {
           createdByUserId: collab.created_by_user_id
         });
       }
-      
+
       const group = groups.get(rootId);
       group.allCollabs.push(collab);
-      
+
       const collabDate = collab.updated_at || collab.created_at;
       if (collabDate > group.lastActivity) {
         group.lastActivity = collabDate;
@@ -224,24 +256,24 @@ const AgencyCollaborations = () => {
         group.currency = collab.currency;
       }
     });
-    
+
     groups.forEach(group => {
       group.allCollabs.sort((a, b) => {
         const dateA = new Date(a.created_at);
         const dateB = new Date(b.created_at);
-        return dateA - dateB; // Oldest first for history
+        return dateA - dateB;
       });
     });
-    
+
     let groupsArray = Array.from(groups.values());
     groupsArray.sort((a, b) => {
       const dateA = new Date(a.lastActivity);
       const dateB = new Date(b.lastActivity);
       return dateB - dateA;
     });
-    
+
     setGroupedCollabs(groupsArray);
-    
+
     const expandedState = {};
     groupsArray.forEach(group => {
       expandedState[group.rootId] = false;
@@ -325,20 +357,19 @@ const AgencyCollaborations = () => {
   const filteredGroups = groupedCollabs.filter(group => {
     const storeName = getEntityName("STORE", group.storeId, "");
     const providerName = getEntityName(group.providerType, group.providerId, "");
-    const matchesSearch = 
+    const matchesSearch =
       group.offer?.titre?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       group.latestMessage?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       storeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
       providerName.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    // Type filter: all, my_responses (created by me), store_requests (created by store)
+
     let matchesType = true;
     if (typeFilter === "my_responses") {
       matchesType = group.createdByRole === "AGENCY_OWNER" || group.createdByRole === "AGENCY_AGENT";
     } else if (typeFilter === "store_requests") {
       matchesType = group.createdByRole === "STORE";
     }
-    
+
     return matchesSearch && matchesType;
   });
 
@@ -357,11 +388,11 @@ const AgencyCollaborations = () => {
       const date = new Date(dateString);
       const now = new Date();
       const diffDays = Math.floor((now - date) / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) return "Today";
       if (diffDays === 1) return "Yesterday";
       if (diffDays < 7) return `${diffDays} days ago`;
-      
+
       return new Intl.DateTimeFormat('en-US', {
         month: 'short',
         day: 'numeric',
@@ -380,7 +411,7 @@ const AgencyCollaborations = () => {
   const renderStatusBadge = (status) => {
     const config = STATUS_CONFIG[status] || STATUS_CONFIG.pending;
     const Icon = config.icon;
-    
+
     return (
       <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.textColor}`}>
         <Icon size={12} />
@@ -423,74 +454,86 @@ const AgencyCollaborations = () => {
     storeRequests: groupedCollabs.filter(g => g.createdByRole === "STORE").length
   };
 
+  const getBorderConfig = (status) => {
+    return STATUS_BORDER_CONFIG[status] || STATUS_BORDER_CONFIG.pending;
+  };
+
   return (
-    <div className="page-shell px-1 py-2">
-      {/* Header */}
-      <div className="page-header-card sticky top-0 z-10">
-        <div className="px-1 py-1">
-          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-emerald-100 dark:bg-emerald-900/30 rounded-xl flex items-center justify-center">
-                  <Handshake size={20} className="text-emerald-600 dark:text-emerald-400" />
-                </div>
-                <div>
-                  <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Collaborations</h1>
-                  <p className="text-sm text-gray-500 dark:text-gray-400">Manage collaboration threads with stores</p>
-                </div>
-              </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-950 dark:to-gray-900 py-6 px-4">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="mb-8 flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-3 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10">
+              <Handshake size={24} className="text-emerald-600 dark:text-emerald-400" />
             </div>
-            <div className="flex items-center gap-3">
-              <div className="flex items-center gap-2 px-3 py-2 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
-                <Bell size={14} className="text-yellow-600" />
-                <span className="text-sm font-medium text-yellow-700 dark:text-yellow-400">
-                  {stats.pending} pending action{stats.pending !== 1 ? 's' : ''}
-                </span>
-              </div>
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 dark:from-white dark:to-gray-400 bg-clip-text text-transparent">
+                Collaborations
+              </h1>
+              <p className="text-sm text-gray-500 dark:text-gray-400">Manage collaboration threads with stores</p>
             </div>
           </div>
-        </div>
-      </div>
+          <div className="flex items-center gap-3 px-4 py-2 bg-amber-50 dark:bg-amber-500/10 rounded-xl border border-amber-200 dark:border-amber-500/20">
+            <Bell size={16} className="text-amber-600" />
+            <span className="text-sm font-medium text-amber-700 dark:text-amber-400">
+              {stats.pending} pending action{stats.pending !== 1 ? 's' : ''}
+            </span>
+          </div>
+        </motion.div>
 
-      <div className="max-w-7xl mx-auto px-6 py-6">
         {/* Stats Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-8 gap-3 mb-6">
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="grid grid-cols-2 md:grid-cols-8 gap-3 mb-6"
+        >
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800 shadow-sm">
             <p className="text-xs text-gray-500">Total</p>
             <p className="text-xl font-bold text-gray-800">{stats.total}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Need Action</p>
-            <p className="text-xl font-bold text-yellow-600">{stats.pending}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-amber-200 dark:border-amber-500/20 shadow-sm">
+            <p className="text-xs text-amber-600 dark:text-amber-400">Need Action</p>
+            <p className="text-xl font-bold text-amber-700">{stats.pending}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Active</p>
-            <p className="text-xl font-bold text-green-600">{stats.active}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-emerald-200 dark:border-emerald-500/20 shadow-sm">
+            <p className="text-xs text-emerald-600">Active</p>
+            <p className="text-xl font-bold text-emerald-700">{stats.active}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Inactive</p>
-            <p className="text-xl font-bold text-orange-600">{stats.inactive}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-slate-200 dark:border-slate-700 shadow-sm">
+            <p className="text-xs text-slate-600">Inactive</p>
+            <p className="text-xl font-bold text-slate-700">{stats.inactive}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Countered</p>
-            <p className="text-xl font-bold text-purple-600">{stats.countered}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-purple-200 dark:border-purple-500/20 shadow-sm">
+            <p className="text-xs text-purple-600">Countered</p>
+            <p className="text-xl font-bold text-purple-700">{stats.countered}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Rejected</p>
-            <p className="text-xl font-bold text-red-600">{stats.rejected}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-rose-200 dark:border-rose-500/20 shadow-sm">
+            <p className="text-xs text-rose-600">Rejected</p>
+            <p className="text-xl font-bold text-rose-700">{stats.rejected}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Your Resp.</p>
-            <p className="text-xl font-bold text-green-600">{stats.myResponses}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-green-200 dark:border-green-500/20 shadow-sm">
+            <p className="text-xs text-green-600">Your Resp.</p>
+            <p className="text-xl font-bold text-green-700">{stats.myResponses}</p>
           </div>
-          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-gray-200 dark:border-gray-800">
-            <p className="text-xs text-gray-500">Store Req.</p>
-            <p className="text-xl font-bold text-blue-600">{stats.storeRequests}</p>
+          <div className="bg-white dark:bg-gray-900 rounded-xl p-3 border border-blue-200 dark:border-blue-500/20 shadow-sm">
+            <p className="text-xs text-blue-600">Store Req.</p>
+            <p className="text-xl font-bold text-blue-700">{stats.storeRequests}</p>
           </div>
-        </div>
+        </motion.div>
 
         {/* Filters Bar */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-6">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white dark:bg-gray-900 rounded-xl shadow-sm border border-gray-200 dark:border-gray-800 p-4 mb-6"
+        >
           <div className="flex flex-col md:flex-row gap-4">
             <div className="flex-1 relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" size={16} />
@@ -502,7 +545,7 @@ const AgencyCollaborations = () => {
                 className="w-full pl-9 pr-4 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
             </div>
-            
+
             <div className="flex gap-2">
               <select
                 value={typeFilter}
@@ -513,7 +556,7 @@ const AgencyCollaborations = () => {
                 <option value="store_requests">📋 Store Requests</option>
                 <option value="my_responses">✏️ Your Responses</option>
               </select>
-              
+
               <select
                 value={statusFilter}
                 onChange={(e) => { setStatusFilter(e.target.value); setCurrentPage(1); }}
@@ -526,7 +569,7 @@ const AgencyCollaborations = () => {
                 <option value="countered">Countered</option>
                 <option value="rejected">Rejected</option>
               </select>
-              
+
               <button
                 onClick={fetchCollaborations}
                 className="p-2 rounded-lg border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800 transition"
@@ -535,18 +578,25 @@ const AgencyCollaborations = () => {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
 
         {/* Error */}
-        {error && (
-          <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-xl">
-            <div className="flex items-center gap-3">
-              <AlertCircle size={18} className="text-red-600" />
-              <p className="text-sm text-red-700">{error}</p>
-              <button onClick={() => setError(null)} className="ml-auto text-red-600">✕</button>
-            </div>
-          </div>
-        )}
+        <AnimatePresence>
+          {error && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 rounded-xl"
+            >
+              <div className="flex items-center gap-3">
+                <AlertCircle size={18} className="text-red-600" />
+                <p className="text-sm text-red-700">{error}</p>
+                <button onClick={() => setError(null)} className="ml-auto text-red-600">✕</button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Loading */}
         {loading && (
@@ -558,19 +608,23 @@ const AgencyCollaborations = () => {
 
         {/* Empty */}
         {!loading && !error && filteredGroups.length === 0 && (
-          <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 p-12 text-center">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 p-12 text-center"
+          >
             <Handshake size={48} className="mx-auto text-gray-300 mb-4" />
             <h3 className="text-lg font-semibold text-gray-700 mb-2">No collaborations found</h3>
             <p className="text-gray-500 text-sm">
               {searchTerm ? "Try adjusting your search" : "When stores request collaboration, threads will appear here"}
             </p>
-          </div>
+          </motion.div>
         )}
 
         {/* Threads List */}
         {!loading && !error && filteredGroups.length > 0 && (
           <div className="space-y-4">
-            {paginatedGroups.map((group) => {
+            {paginatedGroups.map((group, idx) => {
               const isExpanded = expandedGroups[group.rootId];
               const threadCount = group.allCollabs.length;
               const hasActiveInGroup = group.allCollabs.some((item) => item.status === "active");
@@ -581,18 +635,19 @@ const AgencyCollaborations = () => {
               const providerName = getEntityName(group.providerType, group.providerId, "Provider");
               const storeAvatar = getEntityAvatar("STORE", group.storeId);
               const providerAvatar = getEntityAvatar(group.providerType, group.providerId);
-              
+              const borderConfig = getBorderConfig(group.status);
+
               return (
-                <div
+                <motion.div
                   key={group.rootId}
-                  className={`bg-white dark:bg-gray-900 rounded-xl border transition-all ${
-                    needsUserAction 
-                      ? 'border-l-4 border-l-yellow-500 shadow-md' 
-                      : 'border-gray-200 dark:border-gray-800'
-                  } ${isStoreRequest ? 'bg-blue-50/30 dark:bg-blue-900/5' : ''}`}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: idx * 0.05 }}
+                  whileHover={{ scale: 1.01 }}
+                  className={`bg-white dark:bg-gray-900 rounded-xl border border-l-4 transition-all duration-300 shadow-sm hover:shadow-md ${borderConfig.borderColor}`}
                 >
                   {/* Main Card */}
-                  <div className="p-4">
+                  <div className="p-5">
                     <div className="flex items-start justify-between flex-wrap gap-3">
                       <div className="flex-1 min-w-0">
                         {/* Type Badge */}
@@ -616,14 +671,14 @@ const AgencyCollaborations = () => {
                             </span>
                           )}
                         </div>
-                        
+
                         {/* Offer Title */}
-                        <h3 className="font-semibold text-gray-800 dark:text-white">
+                        <h3 className="font-semibold text-gray-800 dark:text-white text-lg">
                           {group.offer?.titre || "—"}
                         </h3>
-                        
+
                         {/* Store Info */}
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                           <div className="flex items-center gap-2">
                             <EntityAvatar avatar={storeAvatar} name={storeName} />
                             <span>Store: {storeName}</span>
@@ -631,25 +686,12 @@ const AgencyCollaborations = () => {
                           <button
                             type="button"
                             onClick={() => setProfileTarget({ type: "STORE", id: group.storeId })}
-                            className="rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100"
+                            className="rounded-md bg-blue-50 px-2 py-1 font-medium text-blue-700 hover:bg-blue-100 transition"
                           >
                             View
                           </button>
                         </div>
-                        <div className="mt-2 flex flex-wrap items-center gap-2 text-xs text-gray-500">
-                          <div className="flex items-center gap-2">
-                            <EntityAvatar avatar={providerAvatar} name={providerName} />
-                            <span>Provider: {providerName}</span>
-                          </div>
-                          <button
-                            type="button"
-                            onClick={() => setProfileTarget({ type: group.providerType, id: group.providerId })}
-                            className="rounded-md bg-slate-100 px-2 py-1 font-medium text-slate-700 hover:bg-slate-200"
-                          >
-                            View
-                          </button>
-                        </div>
-                        
+
                         {/* Latest Message */}
                         {group.latestMessage && (
                           <div className="mt-2 flex items-start gap-1.5">
@@ -659,7 +701,7 @@ const AgencyCollaborations = () => {
                             </p>
                           </div>
                         )}
-                        
+
                         {/* Price & Date */}
                         <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-gray-500">
                           <div className="flex items-center gap-1">
@@ -672,7 +714,7 @@ const AgencyCollaborations = () => {
                           </div>
                         </div>
                       </div>
-                      
+
                       {/* Actions */}
                       <div className="flex items-center gap-2">
                         {threadCount > 1 && (
@@ -697,7 +739,7 @@ const AgencyCollaborations = () => {
                         {needsUserAction && (
                           <Link
                             to={`/collaboration/${selectedItem?.id || group.rootId}`}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-blue-500 hover:bg-blue-600 text-white text-sm rounded-lg transition"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white text-sm rounded-lg transition shadow-sm"
                           >
                             <Reply size={12} />
                             Respond
@@ -707,10 +749,10 @@ const AgencyCollaborations = () => {
                         {!needsUserAction && selectedItem?.status === "pending" && hasActiveInGroup && (
                           <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-amber-50 text-amber-700 text-xs rounded-lg">
                             <CheckCircle size={12} />
-                            Déjà active dans ce groupe
+                            Already active
                           </span>
                         )}
-                        
+
                         {!needsUserAction && (
                           <Link
                             to={`/collaboration/${selectedItem?.id || group.rootId}`}
@@ -732,7 +774,7 @@ const AgencyCollaborations = () => {
                             ) : (
                               <Power size={12} />
                             )}
-                            Désactiver
+                            Deactivate
                           </button>
                         )}
 
@@ -747,10 +789,10 @@ const AgencyCollaborations = () => {
                             ) : (
                               <CheckCircle size={12} />
                             )}
-                            Réactiver
+                            Reactivate
                           </button>
                         )}
-                        
+
                         {threadCount > 1 && (
                           <button
                             onClick={() => toggleGroup(group.rootId)}
@@ -762,124 +804,127 @@ const AgencyCollaborations = () => {
                       </div>
                     </div>
                   </div>
-                  
-                  {/* Expanded History - Timeline from Parent to Last */}
-                  {isExpanded && threadCount > 1 && (
-                    <div className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 rounded-b-xl">
-                      <div className="p-4">
-                        <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
-                          <History size={12} />
-                          Complete History (Parent → Last)
-                        </h4>
-                        
-                        <div className="relative">
-                          {/* Timeline line */}
-                          <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
-                          
-                          <div className="space-y-4">
-                            {group.allCollabs.map((collab, idx) => {
-                              const isLast = idx === group.allCollabs.length - 1;
-                              const isFirst = idx === 0;
-                              const isStoreMessage = collab.created_by_role === "STORE";
-                              const isAgencyMessage = collab.created_by_role === "AGENCY_OWNER" || collab.created_by_role === "AGENCY_AGENT";
-                              const isInitial = collab.kind === "initial";
-                              const sender = getSenderInfo(collab);
-                              
-                              return (
-                                <div key={collab.id} className="relative flex gap-3">
-                                  {/* Timeline dot */}
-                                  <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center ${
-                                    isStoreMessage 
-                                      ? 'bg-blue-100 dark:bg-blue-900/30' 
-                                      : 'bg-green-100 dark:bg-green-900/30'
-                                  }`}>
-                                    {isStoreMessage ? (
-                                      <Store size={16} className="text-blue-600" />
-                                    ) : (
-                                      <User size={16} className="text-green-600" />
-                                    )}
-                                  </div>
-                                  
-                                  {/* Content */}
-                                  <div className={`flex-1 p-3 rounded-lg ${
-                                    isLast 
-                                      ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-sm' 
-                                      : 'bg-gray-100 dark:bg-gray-800/50'
-                                  }`}>
-                                    <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
-                                      <div className="flex items-center gap-2">
-                                        <span className="text-xs font-medium text-gray-500">
-                                          {isInitial ? '📋 Initial Request' : `🔄 Counter Offer #${idx}`}
+
+                  {/* Expanded History - Timeline */}
+                  <AnimatePresence>
+                    {isExpanded && threadCount > 1 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-t border-gray-100 dark:border-gray-800 bg-gray-50 dark:bg-gray-800/30 rounded-b-xl overflow-hidden"
+                      >
+                        <div className="p-5">
+                          <h4 className="text-xs font-semibold uppercase tracking-wider text-gray-500 mb-4 flex items-center gap-2">
+                            <History size={12} />
+                            Complete History (Parent → Last)
+                          </h4>
+
+                          <div className="relative">
+                            {/* Timeline line */}
+                            <div className="absolute left-5 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+
+                            <div className="space-y-4">
+                              {group.allCollabs.map((collab, idx) => {
+                                const isLast = idx === group.allCollabs.length - 1;
+                                const isStoreMessage = collab.created_by_role === "STORE";
+                                const isInitial = collab.kind === "initial";
+                                const sender = getSenderInfo(collab);
+                                const itemBorderConfig = getBorderConfig(collab.status);
+
+                                return (
+                                  <div key={collab.id} className="relative flex gap-3">
+                                    {/* Timeline dot */}
+                                    <div className={`relative z-10 flex-shrink-0 w-10 h-10 rounded-full flex items-center justify-center border-2 ${itemBorderConfig.borderColor} bg-white dark:bg-gray-900 shadow-sm`}>
+                                      {isStoreMessage ? (
+                                        <Store size={16} className="text-blue-600" />
+                                      ) : (
+                                        <User size={16} className="text-green-600" />
+                                      )}
+                                    </div>
+
+                                    {/* Content */}
+                                    <div className={`flex-1 p-4 rounded-xl border-l-4 ${itemBorderConfig.borderColor} ${
+                                      isLast
+                                        ? 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 shadow-md'
+                                        : 'bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700'
+                                    }`}>
+                                      <div className="flex items-center justify-between flex-wrap gap-2 mb-2">
+                                        <div className="flex items-center gap-2 flex-wrap">
+                                          <span className="text-xs font-medium text-gray-500">
+                                            {isInitial ? '📋 Initial Request' : `🔄 Counter Offer #${idx}`}
+                                          </span>
+                                          <span className="text-xs px-2 py-0.5 rounded-full bg-gray-200 dark:bg-gray-700">
+                                            {sender.label}
+                                          </span>
+                                          {renderStatusBadge(collab.status)}
+                                          {isLast && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full">Current</span>}
+                                        </div>
+                                        <span className="text-xs text-gray-400">
+                                          {formatDate(collab.created_at)}
                                         </span>
-                                        <span className={`text-xs px-1.5 py-0.5 rounded ${
-                                          isStoreMessage 
-                                            ? 'bg-blue-100 text-blue-700' 
-                                            : 'bg-green-100 text-green-700'
+                                      </div>
+
+                                      <div className="flex items-center gap-3 text-sm mb-2">
+                                        <div className="flex items-center gap-1">
+                                          <DollarSign size={12} className="text-gray-400" />
+                                          <span className="font-semibold text-gray-800">
+                                            {formatPrice(collab.price_finale, collab.currency)}
+                                          </span>
+                                        </div>
+                                        {collab.accepted_by_store && (
+                                          <span className="text-xs text-green-600 flex items-center gap-1">
+                                            <CheckCircle size={10} /> Store accepted
+                                          </span>
+                                        )}
+                                        {collab.accepted_by_provider && (
+                                          <span className="text-xs text-green-600 flex items-center gap-1">
+                                            <CheckCircle size={10} /> You accepted
+                                          </span>
+                                        )}
+                                      </div>
+
+                                      {collab.message && (
+                                        <div className={`p-2 rounded-lg text-sm ${
+                                          isStoreMessage
+                                            ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300'
+                                            : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
                                         }`}>
-                                          {sender.label}
-                                        </span>
-                                        {renderStatusBadge(collab.status)}
-                                      </div>
-                                      <span className="text-xs text-gray-400">
-                                        {formatDate(collab.created_at)}
-                                      </span>
-                                    </div>
-                                    
-                                    <div className="flex items-center gap-3 text-sm mb-2">
-                                      <div className="flex items-center gap-1">
-                                        <DollarSign size={12} className="text-gray-400" />
-                                        <span className="font-semibold text-gray-800">
-                                          {formatPrice(collab.price_finale, collab.currency)}
-                                        </span>
-                                      </div>
-                                      {collab.accepted_by_store && (
-                                        <span className="text-xs text-green-600 flex items-center gap-1">
-                                          <CheckCircle size={10} /> Store accepted
-                                        </span>
+                                          <p className="italic">"{collab.message}"</p>
+                                        </div>
                                       )}
-                                      {collab.accepted_by_provider && (
-                                        <span className="text-xs text-green-600 flex items-center gap-1">
-                                          <CheckCircle size={10} /> You accepted
-                                        </span>
+
+                                      {/* Arrow indicator for flow */}
+                                      {!isLast && (
+                                        <div className="mt-3 flex justify-center">
+                                          <ArrowRight size={14} className="text-gray-300" />
+                                        </div>
                                       )}
                                     </div>
-                                    
-                                    {collab.message && (
-                                      <div className={`p-2 rounded-lg text-sm ${
-                                        isStoreMessage 
-                                          ? 'bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300' 
-                                          : 'bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300'
-                                      }`}>
-                                        <p className="italic">"{collab.message}"</p>
-                                      </div>
-                                    )}
-                                    
-                                    {/* Arrow indicator for flow */}
-                                    {!isLast && (
-                                      <div className="mt-2 flex justify-end">
-                                        <ArrowRight size={12} className="text-gray-400" />
-                                      </div>
-                                    )}
                                   </div>
-                                </div>
-                              );
-                            })}
+                                );
+                              })}
+                            </div>
+                          </div>
+
+                          {/* Current Status */}
+                          <div className="mt-5 pt-4 text-center border-t border-gray-200 dark:border-gray-700">
+                            <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${borderConfig.badgeColor} shadow-sm`}>
+                              <Zap size={14} />
+                              <span className="text-sm font-medium">
+                                Current Status: {group.status === "active" ? "✓ Active Collaboration" :
+                                  group.status === "pending" ? "⏳ Awaiting Response" :
+                                  group.status === "countered" ? "🔄 Counter Offer Sent" :
+                                  group.status === "rejected" ? "✗ Rejected" :
+                                  group.status === "inactive" ? "⭘ Inactive" : group.status}
+                              </span>
+                            </div>
                           </div>
                         </div>
-                        
-                        {/* Current Status */}
-                        <div className="mt-4 pt-3 text-center border-t border-gray-200 dark:border-gray-700">
-                          <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-gray-100 dark:bg-gray-800 rounded-full">
-                            <Send size={12} className="text-gray-500" />
-                            <span className="text-xs text-gray-600">
-                              Current Status: {group.status === "active" ? "✓ Active Collaboration" : group.status === "pending" ? "⏳ Awaiting Response" : group.status === "countered" ? "🔄 Counter Offer Sent" : "✗ " + group.status}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </motion.div>
               );
             })}
           </div>
@@ -922,8 +967,8 @@ const AgencyCollaborations = () => {
 };
 
 const EntityAvatar = ({ avatar, name }) => (
-  <span className="grid h-6 w-6 flex-shrink-0 place-items-center overflow-hidden rounded-full bg-slate-200 text-[10px] font-semibold text-slate-700">
-    {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : (name || "?").charAt(0)}
+  <span className="grid h-6 w-6 flex-shrink-0 place-items-center overflow-hidden rounded-full bg-gradient-to-br from-gray-200 to-gray-300 dark:from-gray-700 dark:to-gray-600 text-[10px] font-semibold text-gray-700 dark:text-gray-300">
+    {avatar ? <img src={avatar} alt={name} className="h-full w-full object-cover" /> : (name || "?").charAt(0).toUpperCase()}
   </span>
 );
 
@@ -939,21 +984,21 @@ const PublicEntityProfileModal = ({ target, entity, fallbackName, onClose }) => 
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="w-full max-w-md overflow-hidden rounded-xl border border-slate-200 bg-white shadow-xl dark:border-slate-800 dark:bg-slate-900">
-        <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-slate-800">
-          <h3 className="font-semibold text-slate-900 dark:text-white">Profile</h3>
-          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-slate-500 hover:bg-slate-100 dark:hover:bg-slate-800">
+      <div className="w-full max-w-md overflow-hidden rounded-xl border border-gray-200 bg-white shadow-xl dark:border-gray-800 dark:bg-gray-900">
+        <div className="flex items-center justify-between border-b border-gray-200 p-4 dark:border-gray-800">
+          <h3 className="font-semibold text-gray-900 dark:text-white">Profile</h3>
+          <button type="button" onClick={onClose} className="rounded-lg px-2 py-1 text-gray-500 hover:bg-gray-100 dark:hover:bg-gray-800">
             Close
           </button>
         </div>
         <div className="p-5">
           <div className="flex items-center gap-4">
-            <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl bg-primary-100 text-xl font-bold text-primary-700">
+            <div className="grid h-16 w-16 place-items-center overflow-hidden rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 text-xl font-bold text-blue-700">
               {avatar ? <img src={avatar} alt={displayName} className="h-full w-full object-cover" /> : displayName.charAt(0)}
             </div>
             <div className="min-w-0">
-              <p className="truncate text-lg font-semibold text-slate-900 dark:text-white">{displayName}</p>
-              <p className="truncate text-sm text-slate-500">{subtitle}</p>
+              <p className="truncate text-lg font-semibold text-gray-900 dark:text-white">{displayName}</p>
+              <p className="truncate text-sm text-gray-500">{subtitle}</p>
             </div>
           </div>
 
@@ -981,9 +1026,9 @@ const PublicEntityProfileModal = ({ target, entity, fallbackName, onClose }) => 
 const ProfileLine = ({ label, value }) => {
   if (!value) return null;
   return (
-    <div className="flex justify-between gap-4 rounded-lg bg-slate-50 px-3 py-2 dark:bg-slate-800/60">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-right font-medium text-slate-800 dark:text-slate-100">{value}</span>
+    <div className="flex justify-between gap-4 rounded-lg bg-gray-50 px-3 py-2 dark:bg-gray-800/60">
+      <span className="text-gray-500">{label}</span>
+      <span className="text-right font-medium text-gray-800 dark:text-gray-100">{value}</span>
     </div>
   );
 };

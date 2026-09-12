@@ -22,7 +22,7 @@ import {
   X,
   Check
 } from "lucide-react";
-import { GetOffer, UpdateOffer, DeleteOffer, CheckDeleteOffer } from "../../api/auth";
+import { GetOffer, UpdateOffer, DeleteOffer, CheckDeleteOffer, GetActiveCurrencies } from "../../api/auth";
 
 /* =========================================================
    CONSTANTS
@@ -202,6 +202,17 @@ const EditOffer = () => {
   const [toast, setToast] = useState(null);
   const [deleteCheck, setDeleteCheck] = useState(null);
   const [checkingDelete, setCheckingDelete] = useState(false);
+  const [activeCurrencies, setActiveCurrencies] = useState(CURRENCIES);
+
+  useEffect(() => {
+    GetActiveCurrencies()
+      .then((res) => {
+        if (res.data?.length) {
+          setActiveCurrencies(res.data.map((c) => ({ value: c.code, symbol: c.symbol, label: `${c.code} - ${c.label}` })));
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   /* =========================================================
      TOAST HELPERS
@@ -676,7 +687,7 @@ const EditOffer = () => {
                       text-gray-500 dark:text-gray-400
                       cursor-not-allowed opacity-75"
                   >
-                    {CURRENCIES.map(currency => (
+                    {activeCurrencies.map(currency => (
                       <option key={currency.value} value={currency.value}>
                         {currency.label}
                       </option>

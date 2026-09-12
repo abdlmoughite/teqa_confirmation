@@ -19,6 +19,12 @@ import {
   Send,
   UserRound,
   XCircle,
+  Paperclip,
+  FileText,
+  Image as ImageIcon,
+  Music2,
+  X as CloseX,
+  Download,
 } from "lucide-react";
 
 import {
@@ -33,7 +39,9 @@ import {
   ReopenConversation,
   resolvePublicEntity,
   SendConversationMessage,
+  SendConversationFile,
 } from "../../api/auth";
+import TeqaLoader from "../shared/TeqaLoader";
 import { AuthContext } from "../../context/AuthContext";
 import { useToast } from "../../context/ToastContext";
 
@@ -162,7 +170,7 @@ const S = {
     height: size,
     borderRadius: 10,
     background: "var(--teqa-green-dim)",
-    border: "0.5px solid rgba(34,197,94,0.2)",
+    border: "0.5px solid rgba(37,99,235,0.2)",
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -187,6 +195,7 @@ const MessagingCenter = () => {
   const [searchParams] = useSearchParams();
   const messagesEndRef = useRef(null);
   const composerRef    = useRef(null);
+  const fileInputRef   = useRef(null);
 
   const [conversations,       setConversations]       = useState([]);
   const [messages,            setMessages]            = useState([]);
@@ -199,6 +208,8 @@ const MessagingCenter = () => {
   const [sending,             setSending]             = useState(false);
   const [draft,               setDraft]               = useState("");
   const [menuOpen,            setMenuOpen]            = useState(false);
+  const [attachedFile,        setAttachedFile]        = useState(null);
+  const [filePreviewUrl,      setFilePreviewUrl]      = useState(null);
 
   const currentParticipant = useMemo(() => getCurrentParticipant(user), [user]);
   const conversationId  = searchParams.get("conversation_id");
@@ -321,8 +332,28 @@ const MessagingCenter = () => {
   const selectConversation = (c) => { setSelectedConversation(c); navigate(`/messages?conversation_id=${c.id}`); };
 
   const sendMessage = async () => {
+    if (!selectedConversation || sending) return;
+
+    if (attachedFile) {
+      setSending(true);
+      try {
+        const fd = new FormData();
+        fd.append("file", attachedFile);
+        fd.append("message_type", getMessageType(attachedFile));
+        if (draft.trim()) fd.append("body", draft.trim());
+        await SendConversationFile(selectedConversation.id, fd);
+        setAttachedFile(null);
+        setFilePreviewUrl(null);
+        setDraft("");
+        await fetchMessages(selectedConversation);
+        await fetchConversations();
+      } catch { toast.error("Unable to send file"); }
+      finally { setSending(false); }
+      return;
+    }
+
     const body = draft.trim();
-    if (!body || !selectedConversation || sending) return;
+    if (!body) return;
     setSending(true);
     setDraft("");
     try {
@@ -332,6 +363,33 @@ const MessagingCenter = () => {
       composerRef.current?.focus();
     } catch { setDraft(body); toast.error("Unable to send message"); }
     finally { setSending(false); }
+  };
+
+  const getMessageType = (file) => {
+    const mime = file.type || "";
+    if (mime.startsWith("audio/")) return "voice";
+    if (mime.startsWith("image/")) return "image";
+    if (mime === "application/pdf") return "document";
+    if (mime.includes("spreadsheet") || mime.includes("ms-excel") || mime.includes("excel")) return "excel";
+    return "document";
+  };
+
+  const handleFileAttach = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setAttachedFile(file);
+    if (file.type.startsWith("image/")) {
+      setFilePreviewUrl(URL.createObjectURL(file));
+    } else {
+      setFilePreviewUrl(null);
+    }
+    e.target.value = "";
+  };
+
+  const clearAttachment = () => {
+    if (filePreviewUrl) URL.revokeObjectURL(filePreviewUrl);
+    setAttachedFile(null);
+    setFilePreviewUrl(null);
   };
 
   const archiveSelected = async () => {
@@ -407,7 +465,7 @@ const MessagingCenter = () => {
                       padding: "8px 4px",
                       borderRadius: 8,
                       border: "0.5px solid",
-                      borderColor: active ? "rgba(34,197,94,0.3)" : "var(--teqa-border)",
+                      borderColor: active ? "rgba(37,99,235,0.3)" : "var(--teqa-border)",
                       background: active ? "var(--teqa-green-dim)" : "transparent",
                       color: active ? "var(--teqa-green)" : "var(--teqa-muted)",
                       fontSize: 11,
@@ -439,9 +497,7 @@ const MessagingCenter = () => {
           {/* Conversation list */}
           <div style={{ flex: 1, overflowY: "auto", padding: "8px 8px" }} className="app-scrollbar">
             {loading ? (
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
-                <Loader2 size={22} style={{ color: "var(--teqa-green)" }} className="animate-spin" />
-              </div>
+              <TeqaLoader size={0.6} />
             ) : filteredConversations.length ? (
               filteredConversations.map((conv) => (
                 <ConversationRow
@@ -475,9 +531,7 @@ const MessagingCenter = () => {
               {/* Messages */}
               <div style={S.messagesArea} className="app-scrollbar">
                 {messagesLoading ? (
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "center", padding: "40px 0" }}>
-                    <Loader2 size={22} style={{ color: "var(--teqa-green)" }} className="animate-spin" />
-                  </div>
+                  <TeqaLoader size={0.6} />
                 ) : messages.length ? (
                   <>
                     {messages.map((msg) => (
@@ -494,13 +548,26 @@ const MessagingCenter = () => {
               {archived ? (
                 <ArchivedBanner onReopen={reopenSelected} />
               ) : (
-                <MessageComposer
-                  ref={composerRef}
-                  draft={draft}
-                  setDraft={setDraft}
-                  sending={sending}
-                  onSend={sendMessage}
-                />
+                <>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*,audio/*,.pdf,.xlsx,.xls,.doc,.docx"
+                    style={{ display: "none" }}
+                    onChange={handleFileAttach}
+                  />
+                  <MessageComposer
+                    ref={composerRef}
+                    draft={draft}
+                    setDraft={setDraft}
+                    sending={sending}
+                    onSend={sendMessage}
+                    attachedFile={attachedFile}
+                    filePreviewUrl={filePreviewUrl}
+                    onAttachFile={() => fileInputRef.current?.click()}
+                    onClearAttachment={clearAttachment}
+                  />
+                </>
               )}
             </>
           )}
@@ -531,7 +598,7 @@ const ConversationRow = ({ conversation, selected, onClick }) => {
         padding: "10px 10px",
         textAlign: "left",
         border: "0.5px solid",
-        borderColor: selected ? "rgba(34,197,94,0.3)" : "transparent",
+        borderColor: selected ? "rgba(37,99,235,0.3)" : "transparent",
         background: selected ? "var(--teqa-green-dim)" : "transparent",
         cursor: "pointer",
         transition: "all 0.15s",
@@ -716,8 +783,94 @@ const ConversationHeader = ({ conversation, menuOpen, setMenuOpen, onArchive, on
    MESSAGE BUBBLE
 ───────────────────────────────────────────────────────────── */
 
+const FileMessageContent = ({ message, mine }) => {
+  const fileUrl  = message.file_url || message.attachment_url || message.metadata?.file_url;
+  const fileName = message.file_name || message.metadata?.file_name || "File";
+  const fileType = message.file_type || message.metadata?.file_type || message.message_type || "";
+  const isPdf    = fileType === "application/pdf" || /\.pdf$/i.test(fileName) || fileType === "document";
+  const isImage  = fileType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(fileName) || fileType === "image";
+  const isAudio  = fileType.startsWith("audio/") || /\.(mp3|wav|ogg|m4a)$/i.test(fileName) || fileType === "voice";
+  const fileSizeKB = message.file_size ? (message.file_size / 1024).toFixed(0) : null;
+  const mutedColor = mine ? "rgba(255,255,255,0.7)" : "var(--teqa-muted)";
+
+  if (isImage && fileUrl) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <a href={fileUrl} target="_blank" rel="noopener noreferrer" style={{ display: "block" }}>
+          <img
+            src={fileUrl}
+            alt={fileName}
+            style={{ maxWidth: 260, maxHeight: 220, borderRadius: 10, objectFit: "cover", display: "block", cursor: "zoom-in" }}
+          />
+        </a>
+        {message.body && <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{message.body}</p>}
+      </div>
+    );
+  }
+
+  if (isAudio && fileUrl) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, opacity: 0.8 }}>
+          <Music2 size={12} /> Voice message
+        </div>
+        <audio controls src={fileUrl} style={{ width: "100%", maxWidth: 260, height: 32 }} />
+      </div>
+    );
+  }
+
+  if (isPdf) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+        <a
+          href={fileUrl || "#"}
+          target="_blank"
+          rel="noopener noreferrer"
+          style={{ display: "flex", alignItems: "center", gap: 10, textDecoration: "none", padding: "10px 12px", borderRadius: 10, background: mine ? "rgba(255,255,255,0.15)" : "var(--teqa-surface2)", border: mine ? "0.5px solid rgba(255,255,255,0.2)" : "0.5px solid var(--teqa-border)", maxWidth: 260 }}
+        >
+          <div style={{ width: 40, height: 48, borderRadius: 6, background: mine ? "rgba(239,68,68,0.25)" : "#fee2e2", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", flexShrink: 0, border: mine ? "none" : "0.5px solid #fca5a5", gap: 2 }}>
+            <FileText size={18} style={{ color: mine ? "#fca5a5" : "#ef4444" }} />
+            <span style={{ fontSize: 8, fontWeight: 800, color: mine ? "#fca5a5" : "#ef4444", letterSpacing: "0.05em" }}>PDF</span>
+          </div>
+          <div style={{ minWidth: 0, flex: 1 }}>
+            <p style={{ fontSize: 13, fontWeight: 600, margin: "0 0 2px", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", color: mine ? "#fff" : "var(--teqa-text)" }}>{fileName}</p>
+            <p style={{ fontSize: 10, margin: 0, color: mutedColor, display: "flex", alignItems: "center", gap: 3 }}>
+              <Download size={9} />
+              {fileSizeKB ? `${fileSizeKB} KB · ` : ""}PDF · Ouvrir
+            </p>
+          </div>
+        </a>
+        {message.body && <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{message.body}</p>}
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <a
+        href={fileUrl || "#"}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{ display: "flex", alignItems: "center", gap: 8, textDecoration: "none", color: "inherit" }}
+      >
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: mine ? "rgba(255,255,255,0.2)" : "var(--teqa-surface2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+          <FileText size={16} style={{ color: mine ? "#fff" : "var(--teqa-muted)" }} />
+        </div>
+        <div style={{ minWidth: 0 }}>
+          <p style={{ fontSize: 13, fontWeight: 600, margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: 160, color: mine ? "#fff" : "var(--teqa-text)" }}>{fileName}</p>
+          {fileUrl && <p style={{ fontSize: 10, margin: 0, color: mutedColor, display: "flex", alignItems: "center", gap: 3 }}><Download size={9} /> {fileSizeKB ? `${fileSizeKB} KB · ` : ""}Télécharger</p>}
+        </div>
+      </a>
+      {message.body && <p style={{ fontSize: 13, margin: 0, lineHeight: 1.5 }}>{message.body}</p>}
+    </div>
+  );
+};
+
 const MessageBubble = ({ message, mine, conversation }) => {
   const injected = message.message_type === "collaboration_injection";
+  const isFile   = ["file","image","document","voice","excel"].includes(message.message_type) || !!message.file_url || !!message.attachment_url || !!message.metadata?.file_url;
+  const fileType = message.file_type || message.metadata?.file_type || message.message_type || "";
+  const isImageMsg = isFile && (fileType.startsWith("image/") || /\.(jpg|jpeg|png|gif|webp)$/i.test(message.file_name || "") || fileType === "image");
 
   return (
     <div
@@ -726,11 +879,12 @@ const MessageBubble = ({ message, mine, conversation }) => {
     >
       <div style={{
         maxWidth: "72%",
-        padding: "10px 14px",
+        padding: isImageMsg ? "4px" : "10px 14px",
         borderRadius: mine ? "12px 12px 2px 12px" : "12px 12px 12px 2px",
         background: mine ? "var(--teqa-green)" : "var(--teqa-surface)",
         border: mine ? "none" : "0.5px solid var(--teqa-border)",
         color: mine ? "var(--teqa-on-brand)" : "var(--teqa-text)",
+        overflow: isImageMsg ? "hidden" : undefined,
       }}>
 
         {injected ? (
@@ -763,6 +917,8 @@ const MessageBubble = ({ message, mine, conversation }) => {
               </Link>
             )}
           </div>
+        ) : isFile ? (
+          <FileMessageContent message={message} mine={mine} />
         ) : (
           <p style={{ fontSize: 14, lineHeight: 1.55, margin: 0, whiteSpace: "pre-wrap", wordBreak: "break-words" }}>
             {message.body}
@@ -770,7 +926,7 @@ const MessageBubble = ({ message, mine, conversation }) => {
         )}
 
         {/* Meta */}
-        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: 6, fontSize: 10, color: mine ? "rgba(255,255,255,0.55)" : "var(--teqa-hint)" }}>
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", gap: 4, marginTop: isImageMsg ? 2 : 6, fontSize: 10, padding: isImageMsg ? "0 6px 4px" : undefined, color: isImageMsg ? "rgba(255,255,255,0.75)" : mine ? "rgba(255,255,255,0.55)" : "var(--teqa-hint)" }}>
           {!mine && <span>{getParticipantName(conversation) || message.sender_label}</span>}
           <span>{formatRelativeTime(message.created_at)}</span>
           {mine && <CheckCheck size={11} />}
@@ -784,58 +940,104 @@ const MessageBubble = ({ message, mine, conversation }) => {
    MESSAGE COMPOSER
 ───────────────────────────────────────────────────────────── */
 
-const MessageComposer = ({ draft, setDraft, sending, onSend, ref }) => (
-  <div style={S.inputArea}>
-    <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
-      <textarea
-        ref={ref}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" && !e.shiftKey) {
-            e.preventDefault();
-            onSend();
-          }
-        }}
-        rows={1}
-        placeholder="Write a message… (Enter to send, Shift+Enter for new line)"
-        style={{
-          flex: 1,
-          resize: "none",
-          background: "var(--teqa-bg)",
-          border: "0.5px solid var(--teqa-border-md)",
-          borderRadius: 10,
-          padding: "10px 14px",
-          fontSize: 14,
-          color: "var(--teqa-text)",
-          fontFamily: "var(--font-body)",
-          outline: "none",
-          minHeight: 42,
-          maxHeight: 120,
-        }}
-        onFocus={(e) => { e.target.style.borderColor = "var(--teqa-green)"; e.target.style.boxShadow = "0 0 0 3px rgba(34,197,94,0.15)"; }}
-        onBlur={(e)  => { e.target.style.borderColor = "var(--teqa-border-md)"; e.target.style.boxShadow = "none"; }}
-      />
-      <button
-        onClick={onSend}
-        disabled={!draft.trim() || sending}
-        style={{
-          width: 42, height: 42,
-          borderRadius: 10,
-          background: draft.trim() && !sending ? "var(--teqa-green)" : "var(--teqa-surface3)",
-          border: "none",
-          color: draft.trim() && !sending ? "#fff" : "var(--teqa-hint)",
-          cursor: draft.trim() && !sending ? "pointer" : "not-allowed",
-          display: "flex", alignItems: "center", justifyContent: "center",
-          flexShrink: 0,
-          transition: "all 0.15s",
-        }}
-      >
-        {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
-      </button>
+const MessageComposer = ({ draft, setDraft, sending, onSend, ref, attachedFile, filePreviewUrl, onAttachFile, onClearAttachment }) => {
+  const canSend = (draft.trim() || attachedFile) && !sending;
+  return (
+    <div style={S.inputArea}>
+      {/* File preview strip */}
+      {attachedFile && (
+        <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 10px", marginBottom: 8, borderRadius: 10, background: "var(--teqa-surface2)", border: "0.5px solid var(--teqa-border)" }}>
+          {filePreviewUrl ? (
+            <img src={filePreviewUrl} alt="preview" style={{ width: 40, height: 40, borderRadius: 6, objectFit: "cover", flexShrink: 0 }} />
+          ) : (
+            <div style={{ width: 40, height: 40, borderRadius: 6, background: "var(--teqa-green-dim)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+              <FileText size={18} style={{ color: "var(--teqa-green)" }} />
+            </div>
+          )}
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ fontSize: 12, fontWeight: 600, color: "var(--teqa-text)", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+              {attachedFile.name}
+            </p>
+            <p style={{ fontSize: 11, color: "var(--teqa-muted)", margin: 0 }}>
+              {(attachedFile.size / 1024).toFixed(0)} KB
+            </p>
+          </div>
+          <button
+            onClick={onClearAttachment}
+            style={{ width: 26, height: 26, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", background: "var(--teqa-surface3)", border: "none", cursor: "pointer", flexShrink: 0 }}
+          >
+            <CloseX size={13} style={{ color: "var(--teqa-muted)" }} />
+          </button>
+        </div>
+      )}
+
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8 }}>
+        {/* Attach file button */}
+        <button
+          onClick={onAttachFile}
+          type="button"
+          title="Attach file"
+          style={{
+            width: 42, height: 42, borderRadius: 10, flexShrink: 0,
+            background: attachedFile ? "var(--teqa-green-dim)" : "var(--teqa-surface2)",
+            border: `0.5px solid ${attachedFile ? "rgba(37,99,235,0.3)" : "var(--teqa-border)"}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            cursor: "pointer", transition: "all 0.15s",
+          }}
+        >
+          <Paperclip size={16} style={{ color: attachedFile ? "var(--teqa-green)" : "var(--teqa-hint)" }} />
+        </button>
+
+        <textarea
+          ref={ref}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey) {
+              e.preventDefault();
+              onSend();
+            }
+          }}
+          rows={1}
+          placeholder={attachedFile ? "Add a caption… (optional)" : "Write a message… (Enter to send, Shift+Enter for new line)"}
+          style={{
+            flex: 1,
+            resize: "none",
+            background: "var(--teqa-bg)",
+            border: "0.5px solid var(--teqa-border-md)",
+            borderRadius: 10,
+            padding: "10px 14px",
+            fontSize: 14,
+            color: "var(--teqa-text)",
+            fontFamily: "var(--font-body)",
+            outline: "none",
+            minHeight: 42,
+            maxHeight: 120,
+          }}
+          onFocus={(e) => { e.target.style.borderColor = "var(--teqa-green)"; e.target.style.boxShadow = "0 0 0 3px rgba(37,99,235,0.15)"; }}
+          onBlur={(e)  => { e.target.style.borderColor = "var(--teqa-border-md)"; e.target.style.boxShadow = "none"; }}
+        />
+        <button
+          onClick={onSend}
+          disabled={!canSend}
+          style={{
+            width: 42, height: 42,
+            borderRadius: 10,
+            background: canSend ? "var(--teqa-green)" : "var(--teqa-surface3)",
+            border: "none",
+            color: canSend ? "#fff" : "var(--teqa-hint)",
+            cursor: canSend ? "pointer" : "not-allowed",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            flexShrink: 0,
+            transition: "all 0.15s",
+          }}
+        >
+          {sending ? <Loader2 size={16} className="animate-spin" /> : <Send size={16} />}
+        </button>
+      </div>
     </div>
-  </div>
-);
+  );
+};
 
 /* ─────────────────────────────────────────────────────────────
    EMPTY STATES
@@ -877,7 +1079,7 @@ const EmptyList = ({ activeTab }) => {
 };
 
 const ArchivedBanner = ({ onReopen }) => (
-  <div style={{ borderTop: "0.5px solid var(--teqa-border)", background: "rgba(245,158,11,0.08)", padding: "12px 16px", textAlign: "center" }}>
+  <div style={{ borderTop: "0.5px solid var(--teqa-border)", background: "rgba(217,119,6,0.08)", padding: "12px 16px", textAlign: "center" }}>
     <p style={{ fontSize: 13, color: "var(--teqa-warning)", margin: 0 }}>
       This conversation is archived.{" "}
       <button
